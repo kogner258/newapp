@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const stripe = require('stripe')('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'); // Replace with your Stripe secret key
+const stripe = require('stripe')(''); // Replace with your Stripe secret key
 const bodyParser = require('body-parser');
 
 app.use(bodyParser.json());
