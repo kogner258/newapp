@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Replace these values with your Firebase project's values -->
+    <string name="google_app_id">1:508791002396:android:1e61949c5bedea1c4256d9</string>
+    <string name="gcm_defaultSenderId">508791002396</string>
+    <string name="project_id">dissonantapp</string>
+    <string name="google_api_key">AIzaSyA9sy1ImI04a76vr9pPYsB7yIQVyJxgnIk</string>
+</resources>
