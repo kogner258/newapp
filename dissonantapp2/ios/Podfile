@@ -34,6 +34,7 @@ target 'Runner' do
 
   pod 'Firebase/Core'
   pod 'Firebase/Firestore'
+  pod 'Firebase/Auth'
 
   target 'RunnerTests' do
     inherit! :complete

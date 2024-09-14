@@ -1257,6 +1257,7 @@ PODS:
 
 DEPENDENCIES:
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
+  - Firebase/Auth
   - Firebase/Core
   - Firebase/Firestore
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
@@ -1380,6 +1381,6 @@ SPEC CHECKSUMS:
   StripePaymentsUI: 59ccddeacad592b09fa67e8d641340820ddb4751
   StripeUICore: 879bbf5889265db13f52fac8aad7a176ba62481f
 
-PODFILE CHECKSUM: 4c5965aa35c4903f8ec2af05e931e61bd4278da5
+PODFILE CHECKSUM: 2281e5dd887bcf1d4e7fccdecb159851328566b9
 
 COCOAPODS: 1.15.2
