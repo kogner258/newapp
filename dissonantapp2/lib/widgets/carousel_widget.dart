@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:carousel_slider/carousel_slider.dart';
+import 'package:carousel_slider/carousel_slider.dart' as carousel_slider;
 
 class CarouselWidget extends StatelessWidget {
   final List<String> imgList;
@@ -8,8 +8,8 @@ class CarouselWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CarouselSlider(
-      options: CarouselOptions(
+    return carousel_slider.CarouselSlider(
+      options: carousel_slider.CarouselOptions(
         height: 300,  // Increase the height as needed
         autoPlay: true,
         enlargeCenterPage: true,
