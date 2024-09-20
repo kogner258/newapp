@@ -44,119 +44,14 @@ class _HomeScreenState extends State<HomeScreen> {
       SingleChildScrollView(
         child: Column(
           children: [
+            SizedBox(height: 20),
             Padding(
-              padding: EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(5.0),
               child: CarouselWidget(imgList: widget.imgList),
             ),
-            Center(
-              child: Text(
-                'Welcome to Dissonant',
-                style: TextStyle(fontSize: 24, color: Colors.white),
-              ),
-            ),
             SizedBox(height: 20),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('articles')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator();
-                }
-                if (!snapshot.hasData) {
-                  return Center(child: Text('No news found.'));
-                }
-
-                final articles = snapshot.data!.docs;
-
-                return ListView.builder(
-                  physics: NeverScrollableScrollPhysics(), // Disable inner scrolling
-                  shrinkWrap: true, // Take only necessary space
-                  itemCount: articles.length,
-                  itemBuilder: (context, index) {
-                    var article = articles[index];
-                    DateTime articleDate = (article['timestamp'] as Timestamp).toDate();
-                    String formattedDate = DateFormat('MM/dd/yyyy').format(articleDate);
-
-                    return Card(
-                      margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
-                      color: Colors.transparent,  // Set the background to transparent
-                      elevation: 0,  // Remove elevation to make it fully transparent
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ArticleDetailScreen(
-                                title: article['title'] ?? 'Untitled',
-                                authorName: article['authorName'] ?? 'Unknown Author',
-                                authorProfileImageUrl: article['authorProfileImageUrl'] ?? '',
-                                content: article['content'] ?? 'No content available.',
-                                imageUrl: article['imageUrl'] ?? '',
-                                timestamp: articleDate,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                article['title'] ?? 'Untitled',
-                                style: TextStyle(
-                                  color: Colors.white,  // Keep the text color white
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 8.0),
-                              Text(
-                                article['summary'] ?? '',
-                                style: TextStyle(
-                                  color: Colors.white70,  // Keep the summary text color white
-                                  fontSize: 16,
-                                ),
-                              ),
-                              SizedBox(height: 8.0),
-                              Row(
-                                children: [
-                                  if ((article['authorProfileImageUrl'] ?? '').isNotEmpty)
-                                    CircleAvatar(
-                                      backgroundImage: NetworkImage(article['authorProfileImageUrl']),
-                                      radius: 16,
-                                    ),
-                                  if ((article['authorProfileImageUrl'] ?? '').isEmpty)
-                                    CircleAvatar(
-                                      child: Icon(Icons.person, size: 16),
-                                      radius: 16,
-                                    ),
-                                  SizedBox(width: 8.0),
-                                  Text(
-                                    article['authorName'] ?? 'Unknown Author',
-                                    style: TextStyle(color: Colors.white70),  // Keep author name white
-                                  ),
-                                  SizedBox(width: 8.0),
-                                  Text(
-                                    formattedDate,
-                                    style: TextStyle(color: Colors.white38),  // Keep date text white
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            BrandingContentWidget(),
+            SizedBox(height: 20),
           ],
         ),
       ),
@@ -172,7 +67,209 @@ class _HomeScreenState extends State<HomeScreen> {
       body: BackgroundWidget(
         child: _pages[_selectedIndex],
       ),
+    );
+  }
+}
 
+class BrandingContentWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.0), // Add some horizontal padding
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Text(
+            'Own the music you discover',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 8.0),
+          // Subtitle
+          Text(
+            'The affordable alternative for those who hate streaming but love music.',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.white70,
+            ),
+          ),
+          SizedBox(height: 16.0),
+          // Divider or some separator
+          Divider(color: Colors.white24),
+
+          SizedBox(height: 8.0),
+
+          Text(
+            'How It Works',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 8.0),
+          // Steps
+          _buildHowItWorksSteps(),
+          SizedBox(height: 16.0),
+          // Why Choose Dissonant?
+          Text(
+            'Dissonant\'s Mission',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 8.0),
+          // Reasons
+          _buildWhyChooseDissonant(),
+          SizedBox(height: 16.0),
+          // Ready to Rediscover Music?
+          Divider(color: Colors.white24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHowItWorksSteps() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStep(
+          number: '1',
+          title: 'Tell Us About Yourself',
+          description:
+              'Fill out a quick form about your musical preferences—your favorite genres, and how adventurous you want your discovery to be.',
+        ),
+        _buildStep(
+          number: '2',
+          title: 'Receive a Handpicked CD',
+          description:
+              'Our music lover curators select a CD tailored just for you and send it straight to your door at no cost.',
+        ),
+        _buildStep(
+          number: '3',
+          title: 'Immerse Yourself in the Music',
+          description:
+              'Throw it in a player, hold the CD, explore the artwork, read the liner notes, truly live with the music.',
+        ),
+        _buildStep(
+          number: '4',
+          title: 'Keep It or Return It',
+          description:
+              'Loving your CD? Opt to purchase and make it a permanent part of your collection. If not, simply use the prepaid shipping label to send it back, no costs involved.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep({required String number, required String title, required String description}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$number. ',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4.0),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWhyChooseDissonant() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildReason(
+          icon: '🌿',
+          title: 'Sustainability',
+          description:
+              'We give secondhand CDs a new life. The best album you\'ve never heard is collecting dust somewhere, and we want to get it to you.',
+        ),
+        _buildReason(
+          icon: '🎧',
+          title: 'Authentic Experience',
+          description:
+              'Streaming has removed the true connection between artist and listener. We want you to hold your favorite albums in your hands.',
+        ),
+        _buildReason(
+          icon: '💰',
+          title: 'Affordability',
+          description:
+              'Discover new music without breaking the bank. Enjoy our service for free and only pay if you decide to keep a CD.',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReason({required String icon, required String title, required String description}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$icon ',
+            style: TextStyle(fontSize: 24),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$title',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4.0),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

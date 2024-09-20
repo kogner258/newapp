@@ -41,36 +41,46 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
         final albumDoc = await _firestoreService.getAlbumById(albumId);
         if (albumDoc.exists) {
           final album = albumDoc.data() as Map<String, dynamic>;
-          setState(() {
-            _albumCoverUrl = album['coverUrl'] ?? '';
-            _albumInfo = '${album['artist']} - ${album['albumName']}';
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _albumCoverUrl = album['coverUrl'] ?? '';
+              _albumInfo = '${album['artist']} - ${album['albumName']}';
+              _isLoading = false;
+            });
+          }
         } else {
-          setState(() {
-            _isLoading = false;
-            _albumInfo = 'Album not found';
-          });
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+              _albumInfo = 'Album not found';
+            });
+          }
         }
       } else {
-        setState(() {
-          _isLoading = false;
-          _albumInfo = 'Order not found';
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _albumInfo = 'Order not found';
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _albumInfo = 'Failed to load album details';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _albumInfo = 'Failed to load album details';
+        });
+      }
     }
   }
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isSubmitting = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isSubmitting = true;
+        });
+      }
 
       // Collect the feedback data
       Map<String, dynamic> feedback = {
@@ -86,12 +96,16 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
       // Update the order status to 'returned'
       await _firestoreService.updateOrderStatus(widget.orderId, 'returned');
 
-      setState(() {
-        _isSubmitting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
 
       // Navigate back to MyMusicScreen
-      Navigator.pop(context, true);
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     }
   }
 
@@ -142,7 +156,7 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
                                     Text(
-                                      'Please provide your feedback on the album:',
+                                      'Please let us know:',
                                       style: TextStyle(fontSize: 18, color: Colors.black),
                                     ),
                                     SizedBox(height: 16.0),
@@ -159,6 +173,7 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                           borderSide: BorderSide(color: Colors.black, width: 2),
                                         ),
                                       ),
+                                      dropdownColor: Colors.white,  // This sets the dropdown menu background to white
                                       value: _heardBefore,
                                       items: ['Yes', 'No'].map((String value) {
                                         return DropdownMenuItem<String>(
@@ -186,6 +201,7 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                           borderSide: BorderSide(color: Colors.black, width: 2),
                                         ),
                                       ),
+                                      dropdownColor: Colors.white,  // This sets the dropdown menu background to white
                                       value: _ownAlbum,
                                       items: ['Yes', 'No'].map((String value) {
                                         return DropdownMenuItem<String>(
@@ -214,6 +230,7 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                         ),
                                       ),
                                       value: _likedAlbum,
+                                      dropdownColor: Colors.white,  // This sets the dropdown menu background to white
                                       items: ['Yes!', 'Meh', 'Nah'].map((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
@@ -240,6 +257,7 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                           borderSide: BorderSide(color: Colors.black, width: 2),
                                         ),
                                       ),
+                                      style: TextStyle(color: Colors.black),  // Set the text color to black
                                       maxLines: 3,
                                       onChanged: (value) {
                                         setState(() {

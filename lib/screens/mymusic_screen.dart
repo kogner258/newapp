@@ -21,6 +21,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
   bool _orderSent = false;
   bool _returnConfirmed = false;
   bool _orderReturned = false;
+  bool _orderKept = false; // New variable to track if the order is kept
   DocumentSnapshot? _order;
   String _currentImage = 'assets/blank_cd.png'; // Placeholder image
   String _albumInfo = ''; // Album information
@@ -38,33 +39,35 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
   Future<void> _fetchOrderStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      if (userDoc.exists) {
-        QuerySnapshot orderSnapshot = await FirebaseFirestore.instance
-            .collection('orders')
-            .where('userId', isEqualTo: user.uid)
-            .orderBy('timestamp', descending: true)
-            .limit(1)
-            .get();
-        if (orderSnapshot.docs.isNotEmpty) {
-          final order = orderSnapshot.docs.first;
-          final orderData = order.data() as Map<String, dynamic>;
-          if (mounted) {
-            setState(() {
-              _hasOrdered = true;
-              _order = order;
-              _orderSent = orderData['status'] == 'sent';
-              _orderReturned = orderData['status'] == 'returned';
-              _returnConfirmed = orderData['returnConfirmed'] ?? false;
-              _isLoading = false;
-            });
-          }
-        } else {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
+      // Fetch the user's most recent order, ordered by the timestamp descending
+      QuerySnapshot orderSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: user.uid)
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
+
+      if (orderSnapshot.docs.isNotEmpty) {
+        final order = orderSnapshot.docs.first;
+        final orderData = order.data() as Map<String, dynamic>;
+        if (mounted) {
+          String status = orderData['status'];
+          setState(() {
+            _hasOrdered = true;
+            _order = order;
+            _orderSent = status == 'sent';
+            _orderReturned = status == 'returned';
+            _returnConfirmed = status == 'returnedConfirmed';
+            _orderKept = status == 'kept';
+            _isLoading = false;
+          });
+        }
+      } else {
+        // If no orders exist, just stop loading
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
         }
       }
     }
@@ -123,6 +126,21 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
 
     final orderData = _order?.data() as Map<String, dynamic>?;
 
+    // If there's no order or status is 'returned' or 'kept', show a message
+    if (_orderReturned || _returnConfirmed || _orderKept) {
+      return Scaffold(
+        body: BackgroundWidget(
+          child: Center(
+            child: Text(
+              'Order an album to see your music show up here.',
+              style: TextStyle(fontSize: 24, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: BackgroundWidget(
         child: Padding(
@@ -130,105 +148,94 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
           child: Column(
             children: [
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    if (_isAlbumRevealed) // Display this text only after the album is revealed
-                      Text(
-                        "The first spin is better on physical",
-                        style: TextStyle(fontSize: 20, color: Colors.white),
-                        textAlign: TextAlign.center,
-                      ),
-                    SizedBox(height: 45.0),
-                    if (_hasOrdered) ...[
-                      Stack(
-                        alignment: Alignment.center,
+                child: _hasOrdered
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          if (!_isAlbumRevealed) // Only show the blank CD if the album is not revealed
-                            ConstrainedBox(
-                              constraints: BoxConstraints(maxHeight: 300, maxWidth: 300),
-                              child: Image.asset(
-                                'assets/blank_cd.png', // Background CD case image
-                              ),
+                          if (_isAlbumRevealed) // Display this text only after the album is revealed
+                            Text(
+                              "The first spin is better on physical",
+                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              textAlign: TextAlign.center,
                             ),
-                          if (_isDragging || !_isAlbumRevealed) // Show spinning CD while dragging or before album is revealed
-                            Opacity(
-                              opacity: _cdOpacity, // Control opacity based on swipe progress
-                              child: Transform.rotate(
-                                angle: _rotationAngle * math.pi * 2.0,
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(maxHeight: 300, maxWidth: 300),
+                          SizedBox(height: 45.0),
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              if (!_isAlbumRevealed) // Only show the blank CD if the album is not revealed
+                                ConstrainedBox(
+                                  constraints:
+                                      BoxConstraints(maxHeight: 300, maxWidth: 300),
                                   child: Image.asset(
-                                    'assets/blank_cd_disc.png', // Replace with your spinning blank CD image
+                                    'assets/blank_cd.png', // Background CD case image
                                   ),
                                 ),
-                              ),
-                            ),
-                          if (_isAlbumRevealed)
-                            GestureDetector(
-                              onTap: () {
-                                // Add your tap functionality here if necessary
-                              },
-                              child: Column(
-                                children: [
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(maxHeight: 300, maxWidth: 300),
-                                    child: Image.network(
-                                      _currentImage,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Image.asset('assets/blank_cd.png');
-                                      },
+                              if (_isDragging ||
+                                  !_isAlbumRevealed) // Show spinning CD while dragging or before album is revealed
+                                Opacity(
+                                  opacity: _cdOpacity, // Control opacity based on swipe progress
+                                  child: Transform.rotate(
+                                    angle: _rotationAngle * math.pi * 2.0,
+                                    child: ConstrainedBox(
+                                      constraints:
+                                          BoxConstraints(maxHeight: 300, maxWidth: 300),
+                                      child: Image.asset(
+                                        'assets/blank_cd_disc.png', // Replace with your spinning blank CD image
+                                      ),
                                     ),
                                   ),
-                                  SizedBox(height: 10.0),
-                                  Text(
-                                    "Tap to find out more",
-                                    style: TextStyle(fontSize: 16, color: Colors.blue),
-                                    textAlign: TextAlign.center,
+                                ),
+                              if (_isAlbumRevealed)
+                                GestureDetector(
+                                  onTap: () {
+                                    // Navigate to album details page when tapped
+                                  },
+                                  child: Column(
+                                    children: [
+                                      ConstrainedBox(
+                                        constraints:
+                                            BoxConstraints(maxHeight: 300, maxWidth: 300),
+                                        child: Image.network(
+                                          _currentImage,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Image.asset('assets/blank_cd.png');
+                                          },
+                                        ),
+                                      ),
+                                      SizedBox(height: 10.0),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                            ],
+                          ),
+                          if (_orderSent && !_isAlbumRevealed) ...[
+                            SizedBox(height: 16.0),
+                            Text(
+                              'Your album is on its way!',
+                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              textAlign: TextAlign.center,
                             ),
+                          ],
+                          if (!_orderSent && !_isAlbumRevealed) ...[
+                            SizedBox(height: 16.0),
+                            Text(
+                              'We will ship your album soon!',
+                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ],
-                      ),
-                      if (_orderSent && !_isAlbumRevealed) ...[
-                        SizedBox(height: 16.0),
-                        Text(
-                          'Your album is on its way!',
-                          style: TextStyle(fontSize: 24, color: Colors.white),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                      if (_orderReturned && !_returnConfirmed) ...[
-                        SizedBox(height: 16.0),
-                        Text(
-                          'We\'ll update you when we receive the album!',
-                          style: TextStyle(fontSize: 24, color: Colors.white),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                      if (!_orderSent && !_isAlbumRevealed && !_orderReturned && !_returnConfirmed) ...[
-                        SizedBox(height: 16.0),
-                        Text(
-                          'We will ship your album soon!',
-                          style: TextStyle(fontSize: 24, color: Colors.white),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ] else ...[
-                      Center(
+                      )
+                    : Center(
                         child: Text(
                           'Order an album to see your music show up here.',
                           style: TextStyle(fontSize: 24, color: Colors.white),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                    ],
-                  ],
-                ),
               ),
-              if (!_isAlbumRevealed) // Keep swipe-up indicator visible and functional
+              if (_hasOrdered && !_isAlbumRevealed) // Keep swipe-up indicator visible and functional
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Padding(
@@ -237,7 +244,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                       order: _order!,
                       updateImageAndInfo: _updateImageAndInfo,
                       startDragging: _startDragging, // Start spinning CD when dragging starts
-                      stopDragging: _stopDragging,   // Stop spinning CD when dragging ends
+                      stopDragging: _stopDragging, // Stop spinning CD when dragging ends
                       updateRotation: _updateRotation, // Update rotation as the user drags
                     ),
                   ),
@@ -262,7 +269,9 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => ReturnAlbumScreen(orderId: _order!.id)),
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          ReturnAlbumScreen(orderId: _order!.id)),
                                 ).then((value) {
                                   if (value == true) {
                                     _resetImageAndInfo();
@@ -279,7 +288,9 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                               onPressed: () async {
                                 final result = await Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => PaymentScreen(orderId: _order!.id)),
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          PaymentScreen(orderId: _order!.id)),
                                 );
                                 if (result == true) {
                                   _resetImageAndInfo();

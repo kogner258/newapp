@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
 import 'admin_dashboard_screen.dart';
 import 'taste_profile_screen.dart';
+import 'change_password_screen.dart'; // Import the EditProfileScreen
 import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidget
 import '../widgets/stats_bar_widget.dart'; // Import the StatsBar widget
 import '../widgets/profile_picture_selector_widget.dart'; // Import the ProfilePictureSelector
@@ -56,7 +57,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _fetchUserName() async {
     if (_user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(_user!.uid).get();
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.uid)
+          .get();
       setState(() {
         _userName = userDoc['username'];
       });
@@ -86,7 +90,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               else
                 RetroFormContainerWidget(
                   width: double.infinity,
-                  child: StatsBar(albumsSentBack: _albumsSentBack, albumsKept: _albumsKept),
+                  child: StatsBar(
+                    albumsSentBack: _albumsSentBack,
+                    albumsKept: _albumsKept,
+                  ),
                 ), // Wrap StatsBar in RetroFormContainerWidget for consistent styling
               SizedBox(height: 20),
               RetroButton(
@@ -95,6 +102,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => TasteProfileScreen()),
+                  );
+                },
+                color: Color(0xFFFFA500), // Orange color for the button
+                fixedHeight: true,
+              ),
+              SizedBox(height: 20),
+              RetroButton(
+                text: 'Change Password',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
                   );
                 },
                 color: Color(0xFFFFA500), // Orange color for the button

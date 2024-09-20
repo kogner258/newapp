@@ -10,10 +10,10 @@ class CarouselWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return CarouselSlider(
       options: CarouselOptions(
-        height: 300,  // Increase the height as needed
+        height: 300,  // Increase the height for larger images
         autoPlay: true,
         enlargeCenterPage: true,
-        viewportFraction: 0.5,
+        viewportFraction: 0.7,  // Increase to make items take up more space (closer to 1.0 means larger items)
         aspectRatio: 2.0,
         initialPage: 0,
       ),
@@ -23,7 +23,7 @@ class CarouselWidget extends StatelessWidget {
           borderRadius: BorderRadius.all(Radius.circular(5.0)),
           child: Image.asset(
             item,
-            fit: BoxFit.contain,  // Use BoxFit.contain to keep the entire image visible
+            fit: BoxFit.contain,  // Change to cover to fill the area while maintaining aspect ratio
             width: 1000.0,
           ),
         ),
