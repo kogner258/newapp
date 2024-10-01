@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -29,16 +30,72 @@ class _OrderScreenState extends State<OrderScreen> {
   bool _showPlaceOrderMessage = false;
 
   final List<String> _states = [
-    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL',
-    'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT',
-    'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI',
-    'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    'AL',
+    'AK',
+    'AZ',
+    'AR',
+    'CA',
+    'CO',
+    'CT',
+    'DE',
+    'FL',
+    'GA',
+    'HI',
+    'ID',
+    'IL',
+    'IN',
+    'IA',
+    'KS',
+    'KY',
+    'LA',
+    'ME',
+    'MD',
+    'MA',
+    'MI',
+    'MN',
+    'MS',
+    'MO',
+    'MT',
+    'NE',
+    'NV',
+    'NH',
+    'NJ',
+    'NM',
+    'NY',
+    'NC',
+    'ND',
+    'OH',
+    'OK',
+    'OR',
+    'PA',
+    'RI',
+    'SC',
+    'SD',
+    'TN',
+    'TX',
+    'UT',
+    'VT',
+    'VA',
+    'WA',
+    'WV',
+    'WI',
+    'WY'
   ];
+
+  // Define FocusNodes for the fields
+  final FocusNode _zipcodeFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _fetchMostRecentOrderStatus();
+  }
+
+  @override
+  void dispose() {
+    // Dispose of the FocusNodes
+    _zipcodeFocusNode.dispose();
+    super.dispose();
   }
 
   /// Fetches the most recent order based on the timestamp field
@@ -65,7 +122,8 @@ class _OrderScreenState extends State<OrderScreen> {
           if (status == 'returned') {
             _showPlaceOrderMessage = true; // Show message for 'returned' status
           } else if (status == 'returnConfirmed' || status == 'kept') {
-            _showPlaceOrderMessage = false; // Show form for 'returnConfirmed' or 'kept' status
+            _showPlaceOrderMessage =
+                false; // Show form for 'returnConfirmed' or 'kept' status
           }
           _isLoading = false;
         });
@@ -85,23 +143,32 @@ class _OrderScreenState extends State<OrderScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true, // Adjusts body when keyboard appears
       body: BackgroundWidget(
         child: _isLoading
             ? Center(
                 child: CircularProgressIndicator(),
               )
-            : Center(
-                child: SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: 600),
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: _hasOrdered
-                          ? _showPlaceOrderMessage
-                              ? _buildPlaceOrderMessage()
-                              : _buildOrderForm(orderModel, user)
-                          : _buildOrderForm(orderModel, user),
+            : SingleChildScrollView(
+                // Removed Center widget here
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 600,
+                    minHeight: MediaQuery.of(context).size.height,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: 16.0,
+                      right: 16.0,
+                      bottom: MediaQuery.of(context).viewInsets.bottom +
+                          16.0, // Adjust for keyboard
+                      top: 16.0,
                     ),
+                    child: _hasOrdered
+                        ? _showPlaceOrderMessage
+                            ? _buildPlaceOrderMessage()
+                            : _buildOrderForm(orderModel, user)
+                        : _buildOrderForm(orderModel, user),
                   ),
                 ),
               ),
@@ -120,190 +187,227 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   Widget _buildOrderForm(OrderModel orderModel, User? user) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Where should we send your music?',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 16.0),
-          if (orderModel.previousAddresses.isNotEmpty) ...[
+    return KeyboardActions(
+      config: _buildKeyboardActionsConfig(),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Text(
-              'Use a previous address:',
-              style: TextStyle(color: Colors.white),
-            ),
-            DropdownButtonFormField<String>(
-              value: _selectedAddress,
-              items: orderModel.previousAddresses
-                  .map((address) => DropdownMenuItem(
-                        value: address,
-                        child: Text(address),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedAddress = value;
-                  if (value != null) {
-                    _populateFieldsFromSelectedAddress(value);
-                  }
-                });
-              },
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
+              'Where should we send your music?',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
+              textAlign: TextAlign.center,
             ),
             SizedBox(height: 16.0),
-            Text(
-              'Or enter a new address:',
-              style: TextStyle(color: Colors.white),
+            if (orderModel.previousAddresses.isNotEmpty) ...[
+              Text(
+                'Use a previous address:',
+                style: TextStyle(color: Colors.white),
+              ),
+              DropdownButtonFormField<String>(
+                value: _selectedAddress,
+                items: orderModel.previousAddresses
+                    .map((address) => DropdownMenuItem(
+                          value: address,
+                          child: Text(address),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedAddress = value;
+                    if (value != null) {
+                      _populateFieldsFromSelectedAddress(value);
+                    }
+                  });
+                },
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 16.0),
+              Text(
+                'Or enter a new address:',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
+            SizedBox(height: 16.0),
+            TextFormField(
+              decoration: InputDecoration(
+                labelText: 'First Name',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your first name';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  _firstName = value;
+                });
+              },
+            ),
+            SizedBox(height: 16.0),
+            TextFormField(
+              decoration: InputDecoration(
+                labelText: 'Last Name',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your last name';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  _lastName = value;
+                });
+              },
+            ),
+            SizedBox(height: 16.0),
+            TextFormField(
+              decoration: InputDecoration(
+                labelText: 'Address (including apartment number)',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your address';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  _address = value;
+                });
+              },
+            ),
+            SizedBox(height: 16.0),
+            TextFormField(
+              decoration: InputDecoration(
+                labelText: 'City',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your city';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  _city = value;
+                });
+              },
+            ),
+            SizedBox(height: 16.0),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                labelText: 'State',
+                border: OutlineInputBorder(),
+              ),
+              value: _state.isNotEmpty ? _state : null,
+              items: _states.map((String state) {
+                return DropdownMenuItem<String>(
+                  value: state,
+                  child: Text(state),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _state = newValue ?? '';
+                });
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select your state';
+                }
+                return null;
+              },
+            ),
+            SizedBox(height: 16.0),
+            TextFormField(
+              focusNode: _zipcodeFocusNode, // Assign the FocusNode
+              decoration: InputDecoration(
+                labelText: 'Zipcode',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your zipcode';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  _zipcode = value;
+                });
+              },
+            ),
+            SizedBox(height: 16.0),
+            RetroButton(
+              text: 'Order Your CD',
+              onPressed: () {
+                FocusScope.of(context).unfocus(); // Dismiss the keyboard
+                if (_formKey.currentState?.validate() ?? false) {
+                  final address =
+                      '$_firstName $_lastName\n$_address\n$_city, $_state $_zipcode';
+                  _firestoreService
+                      .addOrder(user?.uid ?? '', address)
+                      .then((_) {
+                    FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user?.uid)
+                        .update({
+                      'hasOrdered': true,
+                    });
+                    if (!mounted) return;
+                    setState(() {
+                      _hasOrdered = true;
+                    });
+                  });
+                }
+              },
+              color: Color(0xFFFFA500), // Orange color for the retro button
             ),
           ],
-          SizedBox(height: 16.0),
-          TextFormField(
-            decoration: InputDecoration(
-              labelText: 'First Name',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your first name';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _firstName = value;
-              });
-            },
-          ),
-          SizedBox(height: 16.0),
-          TextFormField(
-            decoration: InputDecoration(
-              labelText: 'Last Name',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your last name';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _lastName = value;
-              });
-            },
-          ),
-          SizedBox(height: 16.0),
-          TextFormField(
-            decoration: InputDecoration(
-              labelText: 'Address (including apartment number)',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your address';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _address = value;
-              });
-            },
-          ),
-          SizedBox(height: 16.0),
-          TextFormField(
-            decoration: InputDecoration(
-              labelText: 'City',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your city';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _city = value;
-              });
-            },
-          ),
-          SizedBox(height: 16.0),
-          DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              labelText: 'State',
-              border: OutlineInputBorder(),
-            ),
-            value: _state.isNotEmpty ? _state : null,
-            items: _states.map((String state) {
-              return DropdownMenuItem<String>(
-                value: state,
-                child: Text(state),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                _state = newValue ?? '';
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select your state';
-              }
-              return null;
-            },
-          ),
-          SizedBox(height: 16.0),
-          TextFormField(
-            decoration: InputDecoration(
-              labelText: 'Zipcode',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your zipcode';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _zipcode = value;
-              });
-            },
-          ),
-          SizedBox(height: 16.0),
-          RetroButton(
-            text: 'Order Your CD',
-            onPressed: () {
-              if (_formKey.currentState?.validate() ?? false) {
-                final address = '$_firstName $_lastName\n$_address\n$_city, $_state $_zipcode';
-                _firestoreService.addOrder(user?.uid ?? '', address).then((_) {
-                  FirebaseFirestore.instance.collection('users').doc(user?.uid).update({
-                    'hasOrdered': true,
-                  });
-                  if (!mounted) return;
-                  setState(() {
-                    _hasOrdered = true;
-                  });
-                });
-              }
-            },
-            color: Color(0xFFFFA500), // Orange color for the retro button
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  KeyboardActionsConfig _buildKeyboardActionsConfig() {
+    return KeyboardActionsConfig(
+      keyboardActionsPlatform: KeyboardActionsPlatform.ALL,
+      actions: [
+        KeyboardActionsItem(
+          focusNode: _zipcodeFocusNode,
+          toolbarButtons: [
+            (node) {
+              return GestureDetector(
+                onTap: () => node.unfocus(),
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'Done',
+                    style: TextStyle(
+                        color: Colors.blue, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              );
+            },
+          ],
+        ),
+      ],
     );
   }
 
