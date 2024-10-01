@@ -111,8 +111,10 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
 
   void _updateRotation(double delta) {
     setState(() {
-      _rotationAngle += delta / -100.0; // Adjust this value to control spin speed
-      _cdOpacity = (_rotationAngle / math.pi).clamp(0.0, 1.0); // Update opacity based on rotation
+      _rotationAngle +=
+          delta / -100.0; // Adjust this value to control spin speed
+      _cdOpacity = (_rotationAngle / math.pi)
+          .clamp(0.0, 1.0); // Update opacity based on rotation
     });
   }
 
@@ -126,7 +128,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
 
     final orderData = _order?.data() as Map<String, dynamic>?;
 
-    // If there's no order or status is 'returned' or 'kept', show a message
+    // If there's no order or status is 'returned', 'returnedConfirmed', or 'kept', show a message
     if (_orderReturned || _returnConfirmed || _orderKept) {
       return Scaffold(
         body: BackgroundWidget(
@@ -153,35 +155,35 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          if (_isAlbumRevealed) // Display this text only after the album is revealed
+                          if (_isAlbumRevealed)
                             Text(
                               "The first spin is better on physical",
-                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           SizedBox(height: 45.0),
                           Stack(
                             alignment: Alignment.center,
                             children: [
-                              if (!_isAlbumRevealed) // Only show the blank CD if the album is not revealed
+                              if (!_isAlbumRevealed)
                                 ConstrainedBox(
-                                  constraints:
-                                      BoxConstraints(maxHeight: 300, maxWidth: 300),
+                                  constraints: BoxConstraints(
+                                      maxHeight: 300, maxWidth: 300),
                                   child: Image.asset(
-                                    'assets/blank_cd.png', // Background CD case image
+                                    'assets/blank_cd.png',
                                   ),
                                 ),
-                              if (_isDragging ||
-                                  !_isAlbumRevealed) // Show spinning CD while dragging or before album is revealed
+                              if (_isDragging || !_isAlbumRevealed)
                                 Opacity(
-                                  opacity: _cdOpacity, // Control opacity based on swipe progress
+                                  opacity: _cdOpacity,
                                   child: Transform.rotate(
                                     angle: _rotationAngle * math.pi * 2.0,
                                     child: ConstrainedBox(
-                                      constraints:
-                                          BoxConstraints(maxHeight: 300, maxWidth: 300),
+                                      constraints: BoxConstraints(
+                                          maxHeight: 300, maxWidth: 300),
                                       child: Image.asset(
-                                        'assets/blank_cd_disc.png', // Replace with your spinning blank CD image
+                                        'assets/blank_cd_disc.png',
                                       ),
                                     ),
                                   ),
@@ -194,12 +196,14 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                                   child: Column(
                                     children: [
                                       ConstrainedBox(
-                                        constraints:
-                                            BoxConstraints(maxHeight: 300, maxWidth: 300),
+                                        constraints: BoxConstraints(
+                                            maxHeight: 300, maxWidth: 300),
                                         child: Image.network(
                                           _currentImage,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Image.asset('assets/blank_cd.png');
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return Image.asset(
+                                                'assets/blank_cd.png');
                                           },
                                         ),
                                       ),
@@ -213,7 +217,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             SizedBox(height: 16.0),
                             Text(
                               'Your album is on its way!',
-                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -221,7 +226,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             SizedBox(height: 16.0),
                             Text(
                               'We will ship your album soon!',
-                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -235,7 +241,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                         ),
                       ),
               ),
-              if (_hasOrdered && !_isAlbumRevealed) // Keep swipe-up indicator visible and functional
+              // Updated condition here
+              if (_hasOrdered && !_isAlbumRevealed && _orderSent)
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Padding(
@@ -243,15 +250,15 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                     child: SwipeSpoilerWidget(
                       order: _order!,
                       updateImageAndInfo: _updateImageAndInfo,
-                      startDragging: _startDragging, // Start spinning CD when dragging starts
-                      stopDragging: _stopDragging, // Stop spinning CD when dragging ends
-                      updateRotation: _updateRotation, // Update rotation as the user drags
+                      startDragging: _startDragging,
+                      stopDragging: _stopDragging,
+                      updateRotation: _updateRotation,
                     ),
                   ),
                 ),
-              if (_isAlbumRevealed) // Only reveal buttons after the album is shown
+              if (_isAlbumRevealed)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 90.0), // Move buttons slightly up
+                  padding: const EdgeInsets.only(bottom: 90.0),
                   child: Column(
                     children: [
                       Text(
@@ -270,15 +277,15 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) =>
-                                          ReturnAlbumScreen(orderId: _order!.id)),
+                                      builder: (context) => ReturnAlbumScreen(
+                                          orderId: _order!.id)),
                                 ).then((value) {
                                   if (value == true) {
                                     _resetImageAndInfo();
                                   }
                                 });
                               },
-                              color: Color(0xFFFFA500), // Orange color for Return Album
+                              color: Color(0xFFFFA500),
                             ),
                           ),
                           SizedBox(width: 20.0),
@@ -296,7 +303,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                                   _resetImageAndInfo();
                                 }
                               },
-                              color: Colors.orange, // Orange color for Keep Album
+                              color: Colors.orange,
                             ),
                           ),
                         ],

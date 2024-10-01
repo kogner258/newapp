@@ -78,13 +78,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               SizedBox(height: 20),
               Text(
-                'Welcome, ${_userName ?? 'User'}',
-                style: TextStyle(fontSize: 24, color: Colors.white),
+                'Welcome, ${_userName ?? 'User'}!',
+                style: TextStyle(fontSize: 32, color: Colors.white),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 20),
-              ProfilePictureSelector(), // Keep the Profile Picture Selector as is
-              SizedBox(height: 20),
+              // ProfilePictureSelector(), // Keep the Profile Picture Selector as is
+              // SizedBox(height: 20),
               if (_isLoading)
                 Center(child: CircularProgressIndicator())
               else
@@ -101,7 +101,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => TasteProfileScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => TasteProfileScreen()),
                   );
                 },
                 color: Color(0xFFFFA500), // Orange color for the button
@@ -113,7 +114,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => ChangePasswordScreen()),
                   );
                 },
                 color: Color(0xFFFFA500), // Orange color for the button
@@ -126,7 +128,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => AdminDashboardScreen()),
                     );
                   },
                   color: Color(0xFFFFA500), // Orange color for the button

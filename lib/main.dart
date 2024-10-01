@@ -18,11 +18,20 @@ import 'screens/emailverification_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'models/order_model.dart';
 import 'widgets/app_bar_widget.dart';
-import 'widgets/bottom_navigation_widget.dart'; 
+import 'widgets/bottom_navigation_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+// **Added import for services.dart**
+import 'package:flutter/services.dart'; // Import this package to use SystemChrome
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // **Set the app to portrait mode only**
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+
   await Firebase.initializeApp();
   runApp(MyApp());
 }
@@ -74,7 +83,6 @@ class MyApp extends StatelessWidget {
           forgotPasswordRoute: (context) => ForgotPasswordScreen(),
           emailVerificationRoute: (context) => EmailVerificationScreen(),
           tasteProfileRoute: (context) => TasteProfileScreen(),
-
         },
         home: AuthenticationWrapper(),
       ),
@@ -129,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(title: 'DISSONANT'),  // Use the custom AppBar
+      appBar: CustomAppBar(title: 'DISSONANT'), // Use the custom AppBar
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationWidget(
         currentIndex: _selectedIndex,

@@ -45,7 +45,7 @@ dependencies:
   firebase_storage: ^12.3.2
   keyboard_actions: ^4.0.0  # Add this line
  # cupertino_icons: ^1.0.6
-
+  flutter_launcher_icons: ^0.14.1
 
 
 flutter_icons:
