@@ -7,7 +7,7 @@ import 'profile_screen.dart';
 import '../widgets/bottom_navigation_widget.dart';
 import '../widgets/carousel_widget.dart';
 import 'article_detail_screen.dart';
-import 'package:intl/intl.dart';  // Import the intl package
+import 'package:intl/intl.dart'; // Import the intl package
 
 class HomeScreen extends StatefulWidget {
   final List<String> imgList = [
@@ -74,198 +74,231 @@ class _HomeScreenState extends State<HomeScreen> {
 class BrandingContentWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.0), // Add some horizontal padding
+    return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
+          // Hero Section
+          _buildHeroSection(),
+          SizedBox(height: 20),
+          // How It Works
+          _buildSectionTitle('How It Works'),
+          _buildHowItWorksSteps(),
+          SizedBox(height: 20),
+          // Dissonant's Mission
+          _buildSectionTitle('Dissonant\'s Mission'),
+          _buildMissionPoints(),
+          SizedBox(height: 20),
+          // Call to Action
+          //_buildCallToAction(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return Container(
+      padding: EdgeInsets.all(16.0),
+      child: Column(
+        children: [
           Text(
-            'Own the music you discover',
+            'Own the Music You Discover',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 32,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Colors.orangeAccent,
             ),
+            textAlign: TextAlign.center,
           ),
-          SizedBox(height: 8.0),
-          // Subtitle
+          SizedBox(height: 10),
           Text(
             'The affordable alternative for those who hate streaming but love music.',
             style: TextStyle(
               fontSize: 18,
               color: Colors.white70,
             ),
+            textAlign: TextAlign.center,
           ),
-          SizedBox(height: 16.0),
-          // Divider or some separator
-          Divider(color: Colors.white24),
+          SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
 
-          SizedBox(height: 8.0),
-
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(color: Colors.white24),
+          ),
+          SizedBox(width: 8),
           Text(
-            'How It Works',
+            title,
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Colors.orangeAccent,
             ),
           ),
-          SizedBox(height: 8.0),
-          // Steps
-          _buildHowItWorksSteps(),
-          SizedBox(height: 16.0),
-          // Why Choose Dissonant?
-          Text(
-            'Dissonant\'s Mission',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Divider(color: Colors.white24),
           ),
-          SizedBox(height: 8.0),
-          // Reasons
-          _buildWhyChooseDissonant(),
-          SizedBox(height: 16.0),
-          // Ready to Rediscover Music?
-          Divider(color: Colors.white24),
         ],
       ),
     );
   }
 
   Widget _buildHowItWorksSteps() {
+    final steps = [
+      {
+        'icon': Icons.person,
+        'title': 'Tell Us About Yourself',
+        'description':
+            'Fill out a quick form about your musical preferences—your favorite genres and how adventurous you want your discovery to be.',
+      },
+      {
+        'icon': Icons.local_shipping,
+        'title': 'Receive a Handpicked CD',
+        'description':
+            'Our music lover curators select a CD tailored just for you and send it straight to your door at no cost.',
+      },
+      {
+        'icon': Icons.headset,
+        'title': 'Immerse Yourself in the Music',
+        'description':
+            'Hold the CD, explore the artwork, read the liner notes, truly live with the music.',
+      },
+      {
+        'icon': Icons.swap_horiz,
+        'title': 'Keep It or Return It',
+        'description':
+            'Love it? Keep it for a small fee. If not, use the prepaid shipping label to send it back, no costs involved.',
+      },
+    ];
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildStep(
-          number: '1',
-          title: 'Tell Us About Yourself',
-          description:
-              'Fill out a quick form about your musical preferences—your favorite genres, and how adventurous you want your discovery to be.',
-        ),
-        _buildStep(
-          number: '2',
-          title: 'Receive a Handpicked CD',
-          description:
-              'Our music lover curators select a CD tailored just for you and send it straight to your door at no cost.',
-        ),
-        _buildStep(
-          number: '3',
-          title: 'Immerse Yourself in the Music',
-          description:
-              'Throw it in a player, hold the CD, explore the artwork, read the liner notes, truly live with the music.',
-        ),
-        _buildStep(
-          number: '4',
-          title: 'Keep It or Return It',
-          description:
-              'Loving your CD? Opt to purchase and make it a permanent part of your collection. If not, simply use the prepaid shipping label to send it back, no costs involved.',
-        ),
-      ],
+      children: steps.map((step) => _buildStepCard(step)).toList(),
     );
   }
 
-  Widget _buildStep({required String number, required String title, required String description}) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$number. ',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+  Widget _buildStepCard(Map<String, dynamic> step) {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.orangeAccent,
+          child: Icon(step['icon'], color: Colors.black),
+        ),
+        title: Text(
+          step['title'],
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 4.0),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
+        ),
+        subtitle: Text(
+          step['description'],
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.white70,
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildWhyChooseDissonant() {
+  Widget _buildMissionPoints() {
+    final missions = [
+      {
+        'icon': Icons.eco,
+        'title': 'Sustainability',
+        'description':
+            'We give secondhand CDs a new life. The best album you\'ve never heard is collecting dust somewhere, and we want to get it to you.',
+      },
+      {
+        'icon': Icons.music_note,
+        'title': 'Authentic Experience',
+        'description':
+            'Streaming has removed the true connection between artist and listener. We want you to hold your favorite albums in your hands.',
+      },
+      {
+        'icon': Icons.attach_money,
+        'title': 'Affordability',
+        'description':
+            'Discover new music without breaking the bank. Enjoy our service for free and only pay if you decide to keep a CD.',
+      },
+    ];
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildReason(
-          icon: '🌿',
-          title: 'Sustainability',
-          description:
-              'We give secondhand CDs a new life. The best album you\'ve never heard is collecting dust somewhere, and we want to get it to you.',
-        ),
-        _buildReason(
-          icon: '🎧',
-          title: 'Authentic Experience',
-          description:
-              'Streaming has removed the true connection between artist and listener. We want you to hold your favorite albums in your hands.',
-        ),
-        _buildReason(
-          icon: '💰',
-          title: 'Affordability',
-          description:
-              'Discover new music without breaking the bank. Enjoy our service for free and only pay if you decide to keep a CD.',
-        ),
-      ],
+      children: missions.map((mission) => _buildMissionCard(mission)).toList(),
     );
   }
 
-  Widget _buildReason({required String icon, required String title, required String description}) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildMissionCard(Map<String, dynamic> mission) {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.orangeAccent,
+          child: Icon(mission['icon'], color: Colors.black),
+        ),
+        title: Text(
+          mission['title'],
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        subtitle: Text(
+          mission['description'],
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.white70,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCallToAction() {
+    return Container(
+      padding: EdgeInsets.all(16.0),
+      child: Column(
         children: [
           Text(
-            '$icon ',
-            style: TextStyle(fontSize: 24),
+            'Ready to Rediscover Music?',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.orangeAccent,
+            ),
+            textAlign: TextAlign.center,
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$title',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 4.0),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
+          SizedBox(height: 10),
+          Text(
+            'Join Dissonant today and embark on a new musical journey.',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.white70,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              // Navigate to sign-up or order page
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orangeAccent,
+              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+            ),
+            child: Text(
+              'Sign Up Now',
+              style: TextStyle(fontSize: 18, color: Colors.black),
             ),
           ),
         ],
