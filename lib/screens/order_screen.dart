@@ -27,58 +27,14 @@ class _OrderScreenState extends State<OrderScreen> {
 
   bool _hasOrdered = false;
   bool _isLoading = true;
+  String _mostRecentOrderStatus = '';
 
   final List<String> _states = [
-    'AL',
-    'AK',
-    'AZ',
-    'AR',
-    'CA',
-    'CO',
-    'CT',
-    'DE',
-    'FL',
-    'GA',
-    'HI',
-    'ID',
-    'IL',
-    'IN',
-    'IA',
-    'KS',
-    'KY',
-    'LA',
-    'ME',
-    'MD',
-    'MA',
-    'MI',
-    'MN',
-    'MS',
-    'MO',
-    'MT',
-    'NE',
-    'NV',
-    'NH',
-    'NJ',
-    'NM',
-    'NY',
-    'NC',
-    'ND',
-    'OH',
-    'OK',
-    'OR',
-    'PA',
-    'RI',
-    'SC',
-    'SD',
-    'TN',
-    'TX',
-    'UT',
-    'VT',
-    'VA',
-    'WA',
-    'WV',
-    'WI',
-    'WY'
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
   // Define FocusNodes for the fields
@@ -109,15 +65,24 @@ class _OrderScreenState extends State<OrderScreen> {
           .get();
 
       if (orderSnapshot.docs.isNotEmpty) {
+        DocumentSnapshot orderDoc = orderSnapshot.docs.first;
+        String status = orderDoc['status'] ?? '';
+
         if (!mounted) return;
         setState(() {
-          _hasOrdered = true;
+          _mostRecentOrderStatus = status;
+          // If the status is 'kept' or 'returnedConfirmed', the user can place a new order
+          if (status == 'kept' || status == 'returnedConfirmed') {
+            _hasOrdered = false; // User can place a new order
+          } else {
+            _hasOrdered = true; // User cannot place a new order
+          }
           _isLoading = false;
         });
       } else {
         if (!mounted) return;
         setState(() {
-          _hasOrdered = false;
+          _hasOrdered = false; // No orders exist, user can place a new order
           _isLoading = false;
         });
       }
@@ -137,7 +102,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 child: CircularProgressIndicator(),
               )
             : _hasOrdered
-                ? _buildPlaceOrderMessage()
+                ? _buildPlaceOrderMessage(_mostRecentOrderStatus)
                 : KeyboardActions(
                     config: _buildKeyboardActionsConfig(),
                     child: SafeArea(
@@ -151,12 +116,22 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _buildPlaceOrderMessage() {
+  Widget _buildPlaceOrderMessage(String status) {
+    String message;
+    if (status == 'pending' ||
+        status == 'sent' ||
+        status == 'new' ||
+        status == 'returned') {
+      message =
+          "You can only make 1 order at a time.";
+    } else {
+      message = "You can now place a new order.";
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Text(
-          "You can only make 1 order at a time.",
+          message,
           style: TextStyle(fontSize: 24, color: Colors.white),
           textAlign: TextAlign.center,
         ),
@@ -346,6 +321,7 @@ class _OrderScreenState extends State<OrderScreen> {
                   if (!mounted) return;
                   setState(() {
                     _hasOrdered = true;
+                    _mostRecentOrderStatus = 'pending'; // Assuming new order is pending
                   });
                 });
               }

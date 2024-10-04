@@ -1,0 +1,20 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: dissonant
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: dissonant
+service: my-express-app
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+
+functions:
+  app:
+    handler: index.handler
+    events:
+      - http:
+          path: create-payment-intent
+          method: post
+
+plugins:
+  - serverless-offline

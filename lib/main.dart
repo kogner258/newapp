@@ -21,8 +21,9 @@ import 'widgets/app_bar_widget.dart';
 import 'widgets/bottom_navigation_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// **Added import for services.dart**
-import 'package:flutter/services.dart'; // Import this package to use SystemChrome
+// **Add these imports**
+import 'package:flutter_stripe/flutter_stripe.dart'; // Import the Stripe package
+import 'package:flutter/services.dart'; // For SystemChrome
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +33,15 @@ void main() async {
     DeviceOrientation.portraitUp,
   ]);
 
+  // **Initialize Firebase**
   await Firebase.initializeApp();
+
+  // **Set the Stripe publishable key**
+  Stripe.publishableKey = 'pk_test_51ODzOACnvJAFsDZ0uGFJt7YGt07xRELgnnVdrQ23l64HGVcU41OtkFIzDCgnqOZJTduEnH8pl3GxUZ98qKHrfGo400jbVXvUrz';
+
+  // **Initialize Stripe settings (optional)**
+  await Stripe.instance.applySettings();
+
   runApp(MyApp());
 }
 

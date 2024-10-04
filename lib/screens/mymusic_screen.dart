@@ -128,8 +128,22 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
 
     final orderData = _order?.data() as Map<String, dynamic>?;
 
-    // If there's no order or status is 'returned', 'returnedConfirmed', or 'kept', show a message
-    if (_orderReturned || _returnConfirmed || _orderKept) {
+    // Display message based on order status
+    if (_orderReturned) {
+      // If the order status is 'returned', show the specific message
+      return Scaffold(
+        body: BackgroundWidget(
+          child: Center(
+            child: Text(
+              "Once we receive your album you'll be able to order another!",
+              style: TextStyle(fontSize: 24, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    } else if (_returnConfirmed || _orderKept || !_hasOrdered) {
+      // If there's no order or status is 'returnedConfirmed' or 'kept', show a message
       return Scaffold(
         body: BackgroundWidget(
           child: Center(
@@ -158,8 +172,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                           if (_isAlbumRevealed)
                             Text(
                               "The first spin is better on physical",
-                              style:
-                                  TextStyle(fontSize: 24, color: Colors.white),
+                              style: TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           SizedBox(height: 45.0),
@@ -168,8 +181,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             children: [
                               if (!_isAlbumRevealed)
                                 ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                      maxHeight: 300, maxWidth: 300),
+                                  constraints:
+                                      BoxConstraints(maxHeight: 300, maxWidth: 300),
                                   child: Image.asset(
                                     'assets/blank_cd.png',
                                   ),
@@ -217,8 +230,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             SizedBox(height: 16.0),
                             Text(
                               'Your album is on its way!',
-                              style:
-                                  TextStyle(fontSize: 24, color: Colors.white),
+                              style: TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -226,8 +238,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             SizedBox(height: 16.0),
                             Text(
                               'We will ship your album soon!',
-                              style:
-                                  TextStyle(fontSize: 24, color: Colors.white),
+                              style: TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -277,8 +288,10 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => ReturnAlbumScreen(
-                                          orderId: _order!.id)),
+                                    builder: (context) => ReturnAlbumScreen(
+                                      orderId: _order!.id,
+                                    ),
+                                  ),
                                 ).then((value) {
                                   if (value == true) {
                                     _resetImageAndInfo();
@@ -296,8 +309,10 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                                 final result = await Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) =>
-                                          PaymentScreen(orderId: _order!.id)),
+                                    builder: (context) => PaymentScreen(
+                                      orderId: _order!.id,
+                                    ),
+                                  ),
                                 );
                                 if (result == true) {
                                   _resetImageAndInfo();

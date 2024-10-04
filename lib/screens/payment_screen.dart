@@ -3,6 +3,8 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import '/services/firestore_service.dart';
 import '/services/payment_service.dart';
 import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidget
+import 'dart:convert';
+import 'package:http/http.dart' as http; // Add http package
 
 class PaymentScreen extends StatefulWidget {
   final String orderId;
@@ -70,27 +72,37 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
 
     try {
-      // 1. Create PaymentIntent on the server
-      final paymentIntentData = await _paymentService.createPaymentIntent(899);
-
-      // 2. Initialize the payment sheet
-      await _paymentService.initPaymentSheet(paymentIntentData['clientSecret']);
-
-      // 3. Display the payment sheet
-      await _paymentService.presentPaymentSheet();
-
-      // 4. Handle payment success
-      await _firestoreService.updateOrderStatus(widget.orderId, 'kept');
-
-      setState(() {
-        _isProcessing = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment successful. Enjoy your new album!')),
+      // 1. Create PaymentIntent using the Lambda function
+      final response = await http.post(
+        Uri.parse('https://86ej4qdp9i.execute-api.us-east-1.amazonaws.com/dev/create-payment-intent'), // New URL for local Lambda function
+        body: jsonEncode({'amount': 899}), // Assuming amount is 899 cents ($8.99)
+        headers: {'Content-Type': 'application/json'},
       );
 
-      Navigator.pop(context, true);
+      if (response.statusCode == 200) {
+        final paymentIntentData = jsonDecode(response.body);
+
+        // 2. Initialize the payment sheet
+        await _paymentService.initPaymentSheet(paymentIntentData['clientSecret']);
+
+        // 3. Display the payment sheet
+        await _paymentService.presentPaymentSheet();
+
+        // 4. Handle payment success
+        await _firestoreService.updateOrderStatus(widget.orderId, 'kept');
+
+        setState(() {
+          _isProcessing = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Payment successful. Enjoy your new album!')),
+        );
+
+        Navigator.pop(context, true);
+      } else {
+        throw Exception('Failed to create PaymentIntent. Server error: ${response.body}');
+      }
     } on StripeException catch (e) {
       setState(() {
         _isProcessing = false;
@@ -132,7 +144,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ? Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 80.0, bottom: 30.0, left: 16.0, right: 16.0), // Adjusted padding
+                  padding: const EdgeInsets.only(
+                      top: 80.0, bottom: 30.0, left: 16.0, right: 16.0), // Adjusted padding
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -175,7 +188,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.zero, // Square shape
                               ),
-                              padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 32.0),
+                              padding: EdgeInsets.symmetric(
+                                  vertical: 16.0, horizontal: 32.0),
                             ),
                             child: Text(
                               'Purchase',
@@ -187,16 +201,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       SizedBox(height: 20.0),
                       Text(
                         'Need a freebie?',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            color: Colors.white),
                       ),
                       Text(
-                        'Reach us at dissonant@gmail.com',
+                        'Reach us at dissonant.helpdesk@gmail.com',
                         style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                       SizedBox(height: 16.0),
                       Text(
                         'Love the album but prefer vinyl?',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            color: Colors.white),
                       ),
                       Text(
                         'Our job is done. Return your CD and run to your local record store and grab it on vinyl!',
