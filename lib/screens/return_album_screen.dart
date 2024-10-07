@@ -1,3 +1,4 @@
+import 'package:dissonantapp2/main.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
@@ -104,7 +105,10 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
 
       // Navigate back to MyMusicScreen
       if (mounted) {
-        Navigator.pop(context, true);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => MyHomePage()),
+          (Route<dynamic> route) => false,
+        );
       }
     }
   }
@@ -133,7 +137,8 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                               height: 200,
                               width: 200,
                               errorBuilder: (context, error, stackTrace) {
-                                return Center(child: Text('Failed to load image'));
+                                return Center(
+                                    child: Text('Failed to load image'));
                               },
                             ),
                           if (_albumInfo.isNotEmpty)
@@ -141,7 +146,8 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                               padding: const EdgeInsets.only(top: 16.0),
                               child: Text(
                                 _albumInfo,
-                                style: TextStyle(fontSize: 24, color: Colors.white),
+                                style: TextStyle(
+                                    fontSize: 24, color: Colors.white),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -153,32 +159,41 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                               child: Form(
                                 key: _formKey,
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     Text(
                                       'Please let us know:',
-                                      style: TextStyle(fontSize: 18, color: Colors.black),
+                                      style: TextStyle(
+                                          fontSize: 18, color: Colors.black),
                                     ),
                                     SizedBox(height: 16.0),
                                     DropdownButtonFormField<String>(
                                       decoration: InputDecoration(
-                                        labelText: 'Had you heard this album before?',
-                                        labelStyle: TextStyle(color: Colors.black),
+                                        labelText:
+                                            'Had you heard this album before?',
+                                        labelStyle:
+                                            TextStyle(color: Colors.black),
                                         filled: true,
                                         fillColor: Colors.white,
                                         enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                       ),
-                                      dropdownColor: Colors.white,  // This sets the dropdown menu background to white
+                                      dropdownColor: Colors
+                                          .white, // This sets the dropdown menu background to white
                                       value: _heardBefore,
                                       items: ['Yes', 'No'].map((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
-                                          child: Text(value, style: TextStyle(color: Colors.black)),
+                                          child: Text(value,
+                                              style: TextStyle(
+                                                  color: Colors.black)),
                                         );
                                       }).toList(),
                                       onChanged: (newValue) {
@@ -190,23 +205,30 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                     SizedBox(height: 16.0),
                                     DropdownButtonFormField<String>(
                                       decoration: InputDecoration(
-                                        labelText: 'Do you already own this album?',
-                                        labelStyle: TextStyle(color: Colors.black),
+                                        labelText:
+                                            'Do you already own this album?',
+                                        labelStyle:
+                                            TextStyle(color: Colors.black),
                                         filled: true,
                                         fillColor: Colors.white,
                                         enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                       ),
-                                      dropdownColor: Colors.white,  // This sets the dropdown menu background to white
+                                      dropdownColor: Colors
+                                          .white, // This sets the dropdown menu background to white
                                       value: _ownAlbum,
                                       items: ['Yes', 'No'].map((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
-                                          child: Text(value, style: TextStyle(color: Colors.black)),
+                                          child: Text(value,
+                                              style: TextStyle(
+                                                  color: Colors.black)),
                                         );
                                       }).toList(),
                                       onChanged: (newValue) {
@@ -219,22 +241,29 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                     DropdownButtonFormField<String>(
                                       decoration: InputDecoration(
                                         labelText: 'Did you like this album?',
-                                        labelStyle: TextStyle(color: Colors.black),
+                                        labelStyle:
+                                            TextStyle(color: Colors.black),
                                         filled: true,
                                         fillColor: Colors.white,
                                         enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                       ),
                                       value: _likedAlbum,
-                                      dropdownColor: Colors.white,  // This sets the dropdown menu background to white
-                                      items: ['Yes!', 'Meh', 'Nah'].map((String value) {
+                                      dropdownColor: Colors
+                                          .white, // This sets the dropdown menu background to white
+                                      items: ['Yes!', 'Meh', 'Nah']
+                                          .map((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
-                                          child: Text(value, style: TextStyle(color: Colors.black)),
+                                          child: Text(value,
+                                              style: TextStyle(
+                                                  color: Colors.black)),
                                         );
                                       }).toList(),
                                       onChanged: (newValue) {
@@ -247,17 +276,22 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                     TextFormField(
                                       decoration: InputDecoration(
                                         labelText: 'Any other thoughts?',
-                                        labelStyle: TextStyle(color: Colors.black),
+                                        labelStyle:
+                                            TextStyle(color: Colors.black),
                                         filled: true,
                                         fillColor: Colors.white,
                                         enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(color: Colors.black, width: 2),
+                                          borderSide: BorderSide(
+                                              color: Colors.black, width: 2),
                                         ),
                                       ),
-                                      style: TextStyle(color: Colors.black),  // Set the text color to black
+                                      style: TextStyle(
+                                          color: Colors
+                                              .black), // Set the text color to black
                                       maxLines: 3,
                                       onChanged: (value) {
                                         setState(() {
@@ -269,7 +303,8 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                                     RetroButton(
                                       text: 'Submit Feedback',
                                       onPressed: _submitForm,
-                                      color: Color(0xFFD24407), // Orange background
+                                      color: Color(
+                                          0xFFD24407), // Orange background
                                     ),
                                   ],
                                 ),

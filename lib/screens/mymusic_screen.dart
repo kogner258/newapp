@@ -49,24 +49,38 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
 
       if (orderSnapshot.docs.isNotEmpty) {
         final order = orderSnapshot.docs.first;
-        final orderData = order.data() as Map<String, dynamic>;
-        if (mounted) {
-          String status = orderData['status'];
-          setState(() {
-            _hasOrdered = true;
-            _order = order;
-            _orderSent = status == 'sent';
-            _orderReturned = status == 'returned';
-            _returnConfirmed = status == 'returnedConfirmed';
-            _orderKept = status == 'kept';
-            _isLoading = false;
-          });
+        final orderData =
+            order.data() as Map<String, dynamic>?; // Cast as nullable
+        if (orderData != null) {
+          // Check if orderData is not null
+          if (mounted) {
+            String status =
+                orderData['status'] ?? ''; // Handle missing 'status' field
+            setState(() {
+              _hasOrdered = true;
+              _order = order;
+              _orderSent = status == 'sent';
+              _orderReturned = status == 'returned';
+              _returnConfirmed = status == 'returnedConfirmed';
+              _orderKept = status == 'kept';
+              _isLoading = false;
+            });
+          }
+        } else {
+          // If orderData is null, set the state to indicate no orders
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+              _hasOrdered = false;
+            });
+          }
         }
       } else {
         // If no orders exist, just stop loading
         if (mounted) {
           setState(() {
             _isLoading = false;
+            _hasOrdered = false;
           });
         }
       }
@@ -172,7 +186,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                           if (_isAlbumRevealed)
                             Text(
                               "The first spin is better on physical",
-                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           SizedBox(height: 45.0),
@@ -181,8 +196,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             children: [
                               if (!_isAlbumRevealed)
                                 ConstrainedBox(
-                                  constraints:
-                                      BoxConstraints(maxHeight: 300, maxWidth: 300),
+                                  constraints: BoxConstraints(
+                                      maxHeight: 300, maxWidth: 300),
                                   child: Image.asset(
                                     'assets/blank_cd.png',
                                   ),
@@ -230,7 +245,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             SizedBox(height: 16.0),
                             Text(
                               'Your album is on its way!',
-                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -238,7 +254,8 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                             SizedBox(height: 16.0),
                             Text(
                               'We will ship your album soon!',
-                              style: TextStyle(fontSize: 24, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -295,6 +312,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                                 ).then((value) {
                                   if (value == true) {
                                     _resetImageAndInfo();
+                                    _fetchOrderStatus(); // Refresh order status
                                   }
                                 });
                               },
@@ -316,6 +334,7 @@ class _MyMusicScreenState extends State<MyMusicScreen> {
                                 );
                                 if (result == true) {
                                   _resetImageAndInfo();
+                                  _fetchOrderStatus(); // Refresh order status
                                 }
                               },
                               color: Colors.orange,

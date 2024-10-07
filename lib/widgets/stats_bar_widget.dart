@@ -9,13 +9,17 @@ class StatsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final totalAlbums = albumsSentBack + albumsKept;
-    final double indicatorPosition = totalAlbums == 0
-        ? 0.5
-        : albumsKept / totalAlbums;
+    final double indicatorPosition =
+        totalAlbums == 0 ? 0.5 : albumsKept / totalAlbums;
+
+    // Calculate alignment based on indicatorPosition
+    // Alignment.x ranges from -1 (left) to 1 (right)
+    final double alignmentX = indicatorPosition * 2 - 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Display the counts
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -30,8 +34,10 @@ class StatsBar extends StatelessWidget {
           ],
         ),
         SizedBox(height: 10),
+        // Progress bar with indicator
         Stack(
           children: [
+            // Background bar
             Container(
               height: 20,
               decoration: BoxDecoration(
@@ -39,8 +45,9 @@ class StatsBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            Positioned(
-              left: indicatorPosition * MediaQuery.of(context).size.width - 10,
+            // Indicator
+            Align(
+              alignment: Alignment(alignmentX, 0),
               child: Container(
                 width: 20,
                 height: 20,

@@ -1,3 +1,4 @@
+import 'package:dissonantapp2/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '/services/firestore_service.dart';
@@ -74,8 +75,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     try {
       // 1. Create PaymentIntent using the Lambda function
       final response = await http.post(
-        Uri.parse('https://86ej4qdp9i.execute-api.us-east-1.amazonaws.com/dev/create-payment-intent'), // New URL for local Lambda function
-        body: jsonEncode({'amount': 899}), // Assuming amount is 899 cents ($8.99)
+        Uri.parse(
+            'https://86ej4qdp9i.execute-api.us-east-1.amazonaws.com/dev/create-payment-intent'), // New URL for local Lambda function
+        body:
+            jsonEncode({'amount': 899}), // Assuming amount is 899 cents ($8.99)
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -83,7 +86,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final paymentIntentData = jsonDecode(response.body);
 
         // 2. Initialize the payment sheet
-        await _paymentService.initPaymentSheet(paymentIntentData['clientSecret']);
+        await _paymentService
+            .initPaymentSheet(paymentIntentData['clientSecret']);
 
         // 3. Display the payment sheet
         await _paymentService.presentPaymentSheet();
@@ -99,9 +103,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
           SnackBar(content: Text('Payment successful. Enjoy your new album!')),
         );
 
-        Navigator.pop(context, true);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => MyHomePage()),
+          (Route<dynamic> route) => false,
+        );
       } else {
-        throw Exception('Failed to create PaymentIntent. Server error: ${response.body}');
+        throw Exception(
+            'Failed to create PaymentIntent. Server error: ${response.body}');
       }
     } on StripeException catch (e) {
       setState(() {
@@ -145,7 +153,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             : SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.only(
-                      top: 80.0, bottom: 30.0, left: 16.0, right: 16.0), // Adjusted padding
+                      top: 80.0,
+                      bottom: 30.0,
+                      left: 16.0,
+                      right: 16.0), // Adjusted padding
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -184,7 +195,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ElevatedButton(
                             onPressed: _processPayment,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFFA500), // Orange background
+                              backgroundColor:
+                                  Color(0xFFFFA500), // Orange background
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.zero, // Square shape
                               ),
@@ -193,7 +205,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             ),
                             child: Text(
                               'Purchase',
-                              style: TextStyle(color: Colors.white, fontSize: 16), // White text
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16), // White text
                             ),
                           ),
                         ],

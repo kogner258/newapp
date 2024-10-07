@@ -3,18 +3,42 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<void> addUser(String uid, String username, String email, String country) async {
-    await _firestore.collection('users').doc(uid).set({
+  // Check if a username exists in the usernames collection
+  Future<bool> checkUsernameExists(String username) async {
+    final doc = await _firestore.collection('usernames').doc(username).get();
+    return doc.exists;
+  }
+
+  // Add a username to the usernames collection
+  Future<void> addUsername(String username, String userId) async {
+    await _firestore.collection('usernames').doc(username).set({
+      'userId': userId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Remove a username from the usernames collection
+  Future<void> removeUsername(String username) async {
+    await _firestore.collection('usernames').doc(username).delete();
+  }
+
+  // Add user to the users collection
+  Future<void> addUser(
+      String userId, String username, String email, String country) async {
+    await _firestore.collection('users').doc(userId).set({
       'username': username,
       'email': email,
       'country': country,
       'addresses': [],
       'hasOrdered': false,
       'tasteProfile': null,
+      'createdAt': FieldValue.serverTimestamp(),
+      // Add other user-related fields as needed
     });
   }
 
-  Future<void> updateOrderReturnStatus(String orderId, bool returnConfirmed) async {
+  Future<void> updateOrderReturnStatus(
+      String orderId, bool returnConfirmed) async {
     await _firestore.collection('orders').doc(orderId).update({
       'returnConfirmed': returnConfirmed,
     });
@@ -42,12 +66,19 @@ class FirestoreService {
   }
 
   Future<void> updateOrderStatus(String orderId, String status) async {
-    await _firestore.collection('orders').doc(orderId).update({'status': status});
+    await _firestore
+        .collection('orders')
+        .doc(orderId)
+        .update({'status': status});
 
     if (status == 'returned' || status == 'kept') {
-      DocumentSnapshot orderDoc = await _firestore.collection('orders').doc(orderId).get();
+      DocumentSnapshot orderDoc =
+          await _firestore.collection('orders').doc(orderId).get();
       String userId = orderDoc['userId'];
-      await _firestore.collection('users').doc(userId).update({'hasOrdered': false});
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .update({'hasOrdered': false});
     }
   }
 
@@ -55,16 +86,7 @@ class FirestoreService {
     return await _firestore.collection('users').doc(userId).get();
   }
 
-    Future<bool> checkUsernameExists(String username) async {
-    final querySnapshot = await _firestore.collection('users')
-      .where('username', isEqualTo: username)
-      .limit(1)
-      .get();
-
-    return querySnapshot.docs.isNotEmpty;
-  }
-
-   Future<Map<String, int>> getUserAlbumStats(String userId) async {
+  Future<Map<String, int>> getUserAlbumStats(String userId) async {
     final QuerySnapshot keptAlbumsQuery = await _firestore
         .collection('orders')
         .where('userId', isEqualTo: userId)
@@ -83,12 +105,17 @@ class FirestoreService {
     };
   }
 
-  Future<void> submitFeedback(String orderId, Map<String, dynamic> feedback) async {
-    await _firestore.collection('orders').doc(orderId).update({'feedback': feedback});
+  Future<void> submitFeedback(
+      String orderId, Map<String, dynamic> feedback) async {
+    await _firestore
+        .collection('orders')
+        .doc(orderId)
+        .update({'feedback': feedback});
   }
 
   Future<bool> isAdmin(String userId) async {
-    DocumentSnapshot doc = await _firestore.collection('admins').doc(userId).get();
+    DocumentSnapshot doc =
+        await _firestore.collection('admins').doc(userId).get();
     return doc.exists;
   }
 
@@ -102,16 +129,23 @@ class FirestoreService {
   }
 
   Future<List<DocumentSnapshot>> getOrdersForUser(String userId) async {
-    QuerySnapshot snapshot = await _firestore.collection('orders').where('userId', isEqualTo: userId).get();
+    QuerySnapshot snapshot = await _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: userId)
+        .get();
     return snapshot.docs;
   }
 
   Future<List<DocumentSnapshot>> getUnfulfilledOrders() async {
-    QuerySnapshot snapshot = await _firestore.collection('orders').where('status', isEqualTo: 'new').get();
+    QuerySnapshot snapshot = await _firestore
+        .collection('orders')
+        .where('status', isEqualTo: 'new')
+        .get();
     return snapshot.docs;
   }
 
-  Future<DocumentReference> addAlbum(String artist, String albumName, String releaseYear, String quality, String coverUrl) async {
+  Future<DocumentReference> addAlbum(String artist, String albumName,
+      String releaseYear, String quality, String coverUrl) async {
     DocumentReference albumRef = await _firestore.collection('albums').add({
       'artist': artist,
       'albumName': albumName,
@@ -131,7 +165,7 @@ class FirestoreService {
     return snapshot.docs;
   }
 
-    Future<void> confirmReturn(String orderId) async {
+  Future<void> confirmReturn(String orderId) async {
     try {
       await _firestore.collection('orders').doc(orderId).update({
         'returnConfirmed': true,
@@ -143,7 +177,7 @@ class FirestoreService {
     }
   }
 
-    Future<List<DocumentSnapshot>> getPreviousAddresses(String userId) async {
+  Future<List<DocumentSnapshot>> getPreviousAddresses(String userId) async {
     final userDoc = await _firestore.collection('users').doc(userId).get();
     if (userDoc.exists && userDoc.data()!.containsKey('previousAddresses')) {
       return userDoc['previousAddresses'];
