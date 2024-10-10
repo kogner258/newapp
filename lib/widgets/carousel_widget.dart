@@ -21,7 +21,7 @@ class CarouselWidget extends StatelessWidget {
         margin: EdgeInsets.all(5.0),
         child: ClipRRect(
           borderRadius: BorderRadius.all(Radius.circular(5.0)),
-          child: Image.asset(
+          child: Image.network(
             item,
             fit: BoxFit.contain,  // Change to cover to fill the area while maintaining aspect ratio
             width: 1000.0,

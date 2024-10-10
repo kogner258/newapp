@@ -34,6 +34,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     setState(() {});
   }
 
+  Future<void> _addAlbum() async {
+    if (_albumFormKey.currentState?.validate() ?? false) {
+      _albumFormKey.currentState?.save();
+      await _firestoreService.addAlbum(_artist, _albumName, _releaseYear, _quality, _coverUrl);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Album added successfully')));
+      setState(() {});
+    }
+  }
+
   Future<void> _confirmReturn(String orderId) async {
     await _firestoreService.confirmReturn(orderId);
     setState(() {});
@@ -68,6 +77,82 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
             },
             child: Text('Go to Home Page'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('Add Album'),
+                    content: Form(
+                      key: _albumFormKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextFormField(
+                            decoration: InputDecoration(labelText: 'Artist'),
+                            onChanged: (value) {
+                              setState(() {
+                                _artist = value;
+                              });
+                            },
+                          ),
+                          TextFormField(
+                            decoration: InputDecoration(labelText: 'Album Name'),
+                            onChanged: (value) {
+                              setState(() {
+                                _albumName = value;
+                              });
+                            },
+                          ),
+                          TextFormField(
+                            decoration: InputDecoration(labelText: 'Release Year'),
+                            onChanged: (value) {
+                              setState(() {
+                                _releaseYear = value;
+                              });
+                            },
+                          ),
+                          TextFormField(
+                            decoration: InputDecoration(labelText: 'Quality'),
+                            onChanged: (value) {
+                              setState(() {
+                                _quality = value;
+                              });
+                            },
+                          ),
+                          TextFormField(
+                            decoration: InputDecoration(labelText: 'Cover URL'),
+                            onChanged: (value) {
+                              setState(() {
+                                _coverUrl = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          _addAlbum();
+                          Navigator.of(context).pop();
+                        },
+                        child: Text('Add Album'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+            child: Text('Add New Album'),
           ),
           Expanded(
             child: FutureBuilder<List<DocumentSnapshot>>(

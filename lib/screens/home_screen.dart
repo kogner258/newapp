@@ -10,62 +10,65 @@ import 'article_detail_screen.dart';
 import 'package:intl/intl.dart'; // Import the intl package
 
 class HomeScreen extends StatefulWidget {
-  final List<String> imgList = [
-    'assets/cd_carousel/hcd003.png',
-    'assets/cd_carousel/hcd004.png',
-    'assets/cd_carousel/hcd005.png',
-    'assets/cd_carousel/hcd006.png',
-    'assets/cd_carousel/hcd007.png',
-    'assets/cd_carousel/hcd008.png',
-    'assets/cd_carousel/hcd009.png',
-    'assets/cd_carousel/hcd010.png',
-    'assets/cd_carousel/hcd011.png',
-    'assets/cd_carousel/hcd012.png',
-    'assets/cd_carousel/hcd013.png',
-    'assets/cd_carousel/hcd014.png',
-    'assets/cd_carousel/hcd015.png',
-    'assets/cd_carousel/hcd016.png',
-    'assets/cd_carousel/hcd017.png',
-  ];
-
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-
   final List<Widget> _pages = [];
+  List<String> imgList = [];
 
   @override
   void initState() {
     super.initState();
-    _pages.addAll([
-      SingleChildScrollView(
-        child: Column(
-          children: [
-            SizedBox(height: 20),
-            Padding(
-              padding: EdgeInsets.all(5.0),
-              child: CarouselWidget(imgList: widget.imgList),
+    _loadAlbumCovers();
+  }
+
+  Future<void> _loadAlbumCovers() async {
+    try {
+      // Fetch the newest 10 albums from Firestore
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('albums')
+          .orderBy('createdAt', descending: true)
+          .limit(10)
+          .get();
+      List<String> fetchedImgList = snapshot.docs.map((doc) => doc['coverUrl'] as String).toList();
+
+      setState(() {
+        imgList = fetchedImgList;
+        _pages.addAll([
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(height: 20),
+                Padding(
+                  padding: EdgeInsets.all(5.0),
+                  child: CarouselWidget(imgList: imgList),
+                ),
+                SizedBox(height: 20),
+                BrandingContentWidget(),
+                SizedBox(height: 20),
+              ],
             ),
-            SizedBox(height: 20),
-            BrandingContentWidget(),
-            SizedBox(height: 20),
-          ],
-        ),
-      ),
-      OrderScreen(),
-      MyMusicScreen(),
-      ProfileScreen(),
-    ]);
+          ),
+          OrderScreen(),
+          MyMusicScreen(),
+          ProfileScreen(),
+        ]);
+      });
+    } catch (e) {
+      print('Error fetching album covers: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: BackgroundWidget(
-        child: _pages[_selectedIndex],
+        child: _pages.isEmpty
+            ? Center(child: CircularProgressIndicator())
+            : _pages[_selectedIndex],
       ),
     );
   }
@@ -260,48 +263,6 @@ class BrandingContentWidget extends StatelessWidget {
             color: Colors.white70,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCallToAction() {
-    return Container(
-      padding: EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Text(
-            'Ready to Rediscover Music?',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.orangeAccent,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Join Dissonant today and embark on a new musical journey.',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.white70,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              // Navigate to sign-up or order page
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orangeAccent,
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-            ),
-            child: Text(
-              'Sign Up Now',
-              style: TextStyle(fontSize: 18, color: Colors.black),
-            ),
-          ),
-        ],
       ),
     );
   }

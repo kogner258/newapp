@@ -152,6 +152,8 @@ class FirestoreService {
       'releaseYear': releaseYear,
       'quality': quality,
       'coverUrl': coverUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+
     });
     return albumRef;
   }

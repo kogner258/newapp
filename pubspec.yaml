@@ -81,7 +81,6 @@ flutter:
   assets:
     - assets/dissonantlogo.png
     - assets/welcome_background.png
-    - assets/cd_carousel/
     - assets/grainoverlay.png
     - assets/blank_cd.png
     - assets/blank_cd_disc.png
