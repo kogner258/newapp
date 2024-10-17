@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
 import 'admin_dashboard_screen.dart';
 import 'taste_profile_screen.dart';
-import 'change_password_screen.dart'; // Import the EditProfileScreen
+import 'change_password_screen.dart';
 import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidget
 import '../widgets/stats_bar_widget.dart'; // Import the StatsBar widget
 import '../widgets/profile_picture_selector_widget.dart'; // Import the ProfilePictureSelector
@@ -83,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 20),
-              // ProfilePictureSelector(), // Keep the Profile Picture Selector as is
+              // ProfilePictureSelector(),
               // SizedBox(height: 20),
               if (_isLoading)
                 Center(child: CircularProgressIndicator())
@@ -94,15 +94,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     albumsSentBack: _albumsSentBack,
                     albumsKept: _albumsKept,
                   ),
-                ), // Wrap StatsBar in RetroFormContainerWidget for consistent styling
+                ),
               SizedBox(height: 20),
               RetroButton(
                 text: 'Edit Taste Profile',
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => TasteProfileScreen()),
+                    MaterialPageRoute(builder: (context) => TasteProfileScreen()),
                   );
                 },
                 color: Color(0xFFFFA500), // Orange color for the button
@@ -114,8 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => ChangePasswordScreen()),
+                    MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
                   );
                 },
                 color: Color(0xFFFFA500), // Orange color for the button
@@ -128,8 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => AdminDashboardScreen()),
+                      MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
                     );
                   },
                   color: Color(0xFFFFA500), // Orange color for the button
@@ -137,6 +134,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
               Spacer(),
+              // Added message here
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 20.0),
+                child: Text(
+                  "Have questions or having issues with Dissonant? Email dissonant.helpdesk@gmail.com and we'll get right back to you!",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+              ),
               RetroButton(
                 text: 'Logout',
                 onPressed: () async {
