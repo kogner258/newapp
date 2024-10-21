@@ -16,11 +16,25 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
   String _albumsListened = '';
 
   final List<String> _genres = [
-    'Rock', 'Pop', 'Jazz', 'Classical', 'Hip-hop', 'Country', 'Electronic', 'Metal', 'Folk', 'Experimental', 'Alternative', 'R&B'
+    'Rock',
+    'Pop',
+    'Jazz',
+    'Classical',
+    'Hip-hop',
+    'Country',
+    'Electronic',
+    'Metal',
+    'Folk',
+    'Experimental',
+    'Alternative',
+    'R&B'
   ];
 
   final List<String> _albumsListenedOptions = [
-    'Music Enjoyer (0-200)', 'Music Lover (200-1000)', 'Music Lover (1000-4000)', 'Music Uncle (4000+)'
+    'Music Enjoyer (0-200)',
+    'Music Lover (200-1000)',
+    'Music Nerd (1000-4000)',
+    'Music Fanatic (4000+)'
   ];
 
   void _submitTasteProfile(String userId) async {
@@ -31,7 +45,7 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
       },
     });
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => MyHomePage()), 
+      MaterialPageRoute(builder: (context) => MyHomePage()),
       (Route<dynamic> route) => false,
     );
   }
