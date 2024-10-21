@@ -37,6 +37,54 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
     'Music Fanatic (4000+)'
   ];
 
+  bool _isLoading = true; // Added to track loading state
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _loadUserTasteProfile(user.uid);
+    } else {
+      // If no user is logged in, set _isLoading to false
+      _isLoading = false;
+    }
+  }
+
+  void _loadUserTasteProfile(String userId) async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        Map<String, dynamic>? data = userDoc.data() as Map<String, dynamic>?;
+        if (data != null && data.containsKey('tasteProfile')) {
+          Map<String, dynamic> tasteProfile = data['tasteProfile'];
+          setState(() {
+            _selectedGenres = List<String>.from(tasteProfile['genres'] ?? []);
+            _albumsListened = tasteProfile['albumsListened'] ?? '';
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading taste profile: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   void _submitTasteProfile(String userId) async {
     await FirebaseFirestore.instance.collection('users').doc(userId).update({
       'tasteProfile': {
@@ -53,6 +101,17 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Taste Profile Survey'),
+        ),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

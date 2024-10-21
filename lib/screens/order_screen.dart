@@ -30,11 +30,56 @@ class _OrderScreenState extends State<OrderScreen> {
   String _mostRecentOrderStatus = '';
 
   final List<String> _states = [
-    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    'AL',
+    'AK',
+    'AZ',
+    'AR',
+    'CA',
+    'CO',
+    'CT',
+    'DE',
+    'FL',
+    'GA',
+    'HI',
+    'ID',
+    'IL',
+    'IN',
+    'IA',
+    'KS',
+    'KY',
+    'LA',
+    'ME',
+    'MD',
+    'MA',
+    'MI',
+    'MN',
+    'MS',
+    'MO',
+    'MT',
+    'NE',
+    'NV',
+    'NH',
+    'NJ',
+    'NM',
+    'NY',
+    'NC',
+    'ND',
+    'OH',
+    'OK',
+    'OR',
+    'PA',
+    'RI',
+    'SC',
+    'SD',
+    'TN',
+    'TX',
+    'UT',
+    'VT',
+    'VA',
+    'WA',
+    'WV',
+    'WI',
+    'WY'
   ];
 
   // Define FocusNodes for the fields
@@ -123,7 +168,7 @@ class _OrderScreenState extends State<OrderScreen> {
         status == 'new' ||
         status == 'returned') {
       message =
-          "You can only make 1 order at a time.";
+          "Thanks for placing an order! You will be able to place another once this one is completed.";
     } else {
       message = "You can now place a new order.";
     }
@@ -321,7 +366,8 @@ class _OrderScreenState extends State<OrderScreen> {
                   if (!mounted) return;
                   setState(() {
                     _hasOrdered = true;
-                    _mostRecentOrderStatus = 'pending'; // Assuming new order is pending
+                    _mostRecentOrderStatus =
+                        'pending'; // Assuming new order is pending
                   });
                 });
               }
