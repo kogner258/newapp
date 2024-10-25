@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '/models/order_model.dart';
-import '/services/firestore_service.dart';
+import '../services/firestore_service.dart';
 import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidget
 import '../widgets/retro_button_widget.dart'; // Import the RetroButtonWidget
 import 'package:keyboard_actions/keyboard_actions.dart'; // Corrected import
@@ -29,57 +27,14 @@ class _OrderScreenState extends State<OrderScreen> {
   bool _isLoading = true;
   String _mostRecentOrderStatus = '';
 
+  List<String> _previousAddresses = []; // To store previous addresses
+
   final List<String> _states = [
-    'AL',
-    'AK',
-    'AZ',
-    'AR',
-    'CA',
-    'CO',
-    'CT',
-    'DE',
-    'FL',
-    'GA',
-    'HI',
-    'ID',
-    'IL',
-    'IN',
-    'IA',
-    'KS',
-    'KY',
-    'LA',
-    'ME',
-    'MD',
-    'MA',
-    'MI',
-    'MN',
-    'MS',
-    'MO',
-    'MT',
-    'NE',
-    'NV',
-    'NH',
-    'NJ',
-    'NM',
-    'NY',
-    'NC',
-    'ND',
-    'OH',
-    'OK',
-    'OR',
-    'PA',
-    'RI',
-    'SC',
-    'SD',
-    'TN',
-    'TX',
-    'UT',
-    'VT',
-    'VA',
-    'WA',
-    'WV',
-    'WI',
-    'WY'
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
   // Define FocusNodes for the fields
@@ -89,6 +44,7 @@ class _OrderScreenState extends State<OrderScreen> {
   void initState() {
     super.initState();
     _fetchMostRecentOrderStatus();
+    _loadPreviousAddresses(); // Load previous addresses from orders
   }
 
   @override
@@ -105,8 +61,8 @@ class _OrderScreenState extends State<OrderScreen> {
       QuerySnapshot orderSnapshot = await FirebaseFirestore.instance
           .collection('orders')
           .where('userId', isEqualTo: user.uid)
-          .orderBy('timestamp', descending: true) // Sorting by timestamp
-          .limit(1) // Get the most recent order
+          .orderBy('timestamp', descending: true)
+          .limit(1)
           .get();
 
       if (orderSnapshot.docs.isNotEmpty) {
@@ -116,7 +72,6 @@ class _OrderScreenState extends State<OrderScreen> {
         if (!mounted) return;
         setState(() {
           _mostRecentOrderStatus = status;
-          // If the status is 'kept' or 'returnedConfirmed', the user can place a new order
           if (status == 'kept' || status == 'returnedConfirmed') {
             _hasOrdered = false; // User can place a new order
           } else {
@@ -134,9 +89,33 @@ class _OrderScreenState extends State<OrderScreen> {
     }
   }
 
+  /// Loads the last three previous addresses from the orders collection
+  Future<void> _loadPreviousAddresses() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: user.uid)
+          .orderBy('timestamp', descending: true)
+          .limit(10) // Fetch last 10 orders to account for potential duplicates
+          .get();
+
+      // Extract addresses and remove duplicates
+      Set<String> addressSet = ordersSnapshot.docs
+          .map((doc) => doc['address'] as String)
+          .toSet();
+
+      // Take the first three unique addresses
+      List<String> addresses = addressSet.take(3).toList();
+
+      setState(() {
+        _previousAddresses = addresses;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final orderModel = Provider.of<OrderModel>(context);
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
@@ -153,7 +132,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     child: SafeArea(
                       child: Form(
                         key: _formKey,
-                        child: _buildOrderForm(orderModel, user),
+                        child: _buildOrderForm(user),
                       ),
                     ),
                   ),
@@ -184,7 +163,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _buildOrderForm(OrderModel orderModel, User? user) {
+  Widget _buildOrderForm(User? user) {
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Column(
@@ -200,19 +179,31 @@ class _OrderScreenState extends State<OrderScreen> {
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 16.0),
-          if (orderModel.previousAddresses.isNotEmpty) ...[
+          if (_previousAddresses.isNotEmpty) ...[
             Text(
               'Use a previous address:',
               style: TextStyle(color: Colors.white),
             ),
             DropdownButtonFormField<String>(
               value: _selectedAddress,
-              items: orderModel.previousAddresses
-                  .map((address) => DropdownMenuItem(
-                        value: address,
+              items: _previousAddresses.asMap().entries.map((entry) {
+                int idx = entry.key;
+                String address = entry.value;
+                return DropdownMenuItem<String>(
+                  value: address,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Text(address),
-                      ))
-                  .toList(),
+                      ),
+                      if (idx != _previousAddresses.length - 1)
+                        Divider(color: Colors.white, thickness: 1),
+                    ],
+                  ),
+                );
+              }).toList(),
               onChanged: (value) {
                 setState(() {
                   _selectedAddress = value;
@@ -224,7 +215,9 @@ class _OrderScreenState extends State<OrderScreen> {
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
               ),
+              dropdownColor: Colors.black87,
             ),
+
             SizedBox(height: 16.0),
             Text(
               'Or enter a new address:',
@@ -233,6 +226,7 @@ class _OrderScreenState extends State<OrderScreen> {
           ],
           SizedBox(height: 16.0),
           TextFormField(
+            initialValue: _firstName,
             decoration: InputDecoration(
               labelText: 'First Name',
               border: OutlineInputBorder(),
@@ -251,6 +245,7 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
           SizedBox(height: 16.0),
           TextFormField(
+            initialValue: _lastName,
             decoration: InputDecoration(
               labelText: 'Last Name',
               border: OutlineInputBorder(),
@@ -269,6 +264,7 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
           SizedBox(height: 16.0),
           TextFormField(
+            initialValue: _address,
             decoration: InputDecoration(
               labelText: 'Address (including apartment number)',
               border: OutlineInputBorder(),
@@ -287,6 +283,7 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
           SizedBox(height: 16.0),
           TextFormField(
+            initialValue: _city,
             decoration: InputDecoration(
               labelText: 'City',
               border: OutlineInputBorder(),
@@ -330,6 +327,7 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
           SizedBox(height: 16.0),
           TextFormField(
+            initialValue: _zipcode,
             focusNode: _zipcodeFocusNode, // Assign the FocusNode
             decoration: InputDecoration(
               labelText: 'Zipcode',
@@ -357,17 +355,19 @@ class _OrderScreenState extends State<OrderScreen> {
                 final address =
                     '$_firstName $_lastName\n$_address\n$_city, $_state $_zipcode';
                 _firestoreService.addOrder(user?.uid ?? '', address).then((_) {
-                  FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(user?.uid)
-                      .update({
-                    'hasOrdered': true,
-                  });
                   if (!mounted) return;
                   setState(() {
                     _hasOrdered = true;
-                    _mostRecentOrderStatus =
-                        'pending'; // Assuming new order is pending
+                    _mostRecentOrderStatus = 'pending'; // Assuming new order is pending
+                    // Update the local addresses list
+                    if (!_previousAddresses.contains(address)) {
+                      // Insert the new address at the beginning
+                      _previousAddresses.insert(0, address);
+                      // Keep only the last three addresses
+                      if (_previousAddresses.length > 3) {
+                        _previousAddresses = _previousAddresses.sublist(0, 3);
+                      }
+                    }
                   });
                 });
               }
@@ -393,8 +393,8 @@ class _OrderScreenState extends State<OrderScreen> {
                   padding: EdgeInsets.all(8.0),
                   child: Text(
                     'Done',
-                    style: TextStyle(
-                        color: Colors.blue, fontWeight: FontWeight.bold),
+                    style:
+                        TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                   ),
                 ),
               );
@@ -411,16 +411,16 @@ class _OrderScreenState extends State<OrderScreen> {
       List<String> nameParts = parts[0].split(' ');
       if (nameParts.length >= 2) {
         _firstName = nameParts[0];
-        _lastName = nameParts[1];
+        _lastName = nameParts.sublist(1).join(' '); // Handle middle names
       }
       _address = parts[1];
       List<String> cityStateZip = parts[2].split(', ');
       if (cityStateZip.length == 2) {
         _city = cityStateZip[0];
         List<String> stateZip = cityStateZip[1].split(' ');
-        if (stateZip.length == 2) {
+        if (stateZip.length >= 2) {
           _state = stateZip[0];
-          _zipcode = stateZip[1];
+          _zipcode = stateZip.sublist(1).join(' ');
         }
       }
     }

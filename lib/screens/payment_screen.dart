@@ -214,18 +214,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                       SizedBox(height: 20.0),
                       Text(
-                        'Need a freebie?',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Colors.white),
-                      ),
-                      Text(
-                        'Reach us at dissonant.helpdesk@gmail.com',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                      SizedBox(height: 16.0),
-                      Text(
                         'Love the album but prefer vinyl?',
                         style: TextStyle(
                             fontWeight: FontWeight.bold,

@@ -143,9 +143,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (value.length < 8) {
       return 'Password must be at least 8 characters long';
     }
-    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$').hasMatch(value)) {
-      return 'Password must contain letters and numbers';
-    }
+  if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$').hasMatch(value)) {
+    return 'Password must contain letters and numbers';
+  }
     return null;
   }
 

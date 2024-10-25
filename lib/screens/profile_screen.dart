@@ -143,18 +143,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
-              RetroButton(
-                text: 'Logout',
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => WelcomeScreen()),
-                  );
-                },
-                color: Colors.red, // Red color for the button
-                fixedHeight: true,
-              ),
+              if (_isAdmin)
+                RetroButton(
+                  text: 'Logout',
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => WelcomeScreen()),
+                    );
+                  },
+                  color: Colors.red, // Red color for the button
+                  fixedHeight: true,
+                ),
             ],
           ),
         ),

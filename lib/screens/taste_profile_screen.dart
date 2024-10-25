@@ -12,8 +12,14 @@ class TasteProfileScreen extends StatefulWidget {
 class _TasteProfileScreenState extends State<TasteProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // Existing variables
   List<String> _selectedGenres = [];
   String _albumsListened = '';
+
+  // New variables for decades and musical bio
+  final List<String> _decades = ['60s', '70s', '80s', '90s', '00s', '10s', '20s'];
+  List<String> _selectedDecades = [];
+  String _musicalBio = '';
 
   final List<String> _genres = [
     'Rock',
@@ -65,6 +71,8 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
           setState(() {
             _selectedGenres = List<String>.from(tasteProfile['genres'] ?? []);
             _albumsListened = tasteProfile['albumsListened'] ?? '';
+            _selectedDecades = List<String>.from(tasteProfile['decades'] ?? []);
+            _musicalBio = tasteProfile['musicalBio'] ?? '';
             _isLoading = false;
           });
         } else {
@@ -90,6 +98,8 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
       'tasteProfile': {
         'genres': _selectedGenres,
         'albumsListened': _albumsListened,
+        'decades': _selectedDecades,
+        'musicalBio': _musicalBio,
       },
     });
     Navigator.of(context).pushAndRemoveUntil(
@@ -123,6 +133,7 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
           key: _formKey,
           child: ListView(
             children: [
+              // Favorite Genres
               Text(
                 'Select your favorite music genres:',
                 style: TextStyle(fontSize: 18),
@@ -143,6 +154,30 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
                 );
               }).toList(),
               SizedBox(height: 16.0),
+
+              // Favorite Decades
+              Text(
+                'Select your favorite decades of music:',
+                style: TextStyle(fontSize: 18),
+              ),
+              ..._decades.map((decade) {
+                return CheckboxListTile(
+                  title: Text(decade),
+                  value: _selectedDecades.contains(decade),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value == true) {
+                        _selectedDecades.add(decade);
+                      } else {
+                        _selectedDecades.remove(decade);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+              SizedBox(height: 16.0),
+
+              // Albums Listened
               Text(
                 'About how many albums have you listened to?',
                 style: TextStyle(fontSize: 18),
@@ -171,6 +206,29 @@ class _TasteProfileScreenState extends State<TasteProfileScreen> {
                 },
               ),
               SizedBox(height: 16.0),
+
+              // Musical Bio
+              Text(
+                'Is there anything else you\'d like us to know about your music taste?',
+                style: TextStyle(fontSize: 18),
+              ),
+              SizedBox(height: 8.0),
+              TextFormField(
+                initialValue: _musicalBio,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: 'Your Musical Bio',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _musicalBio = value;
+                  });
+                },
+              ),
+              SizedBox(height: 16.0),
+
+              // Submit Button
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState?.validate() ?? false) {
