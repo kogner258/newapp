@@ -30,11 +30,56 @@ class _OrderScreenState extends State<OrderScreen> {
   List<String> _previousAddresses = []; // To store previous addresses
 
   final List<String> _states = [
-    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    'AL',
+    'AK',
+    'AZ',
+    'AR',
+    'CA',
+    'CO',
+    'CT',
+    'DE',
+    'FL',
+    'GA',
+    'HI',
+    'ID',
+    'IL',
+    'IN',
+    'IA',
+    'KS',
+    'KY',
+    'LA',
+    'ME',
+    'MD',
+    'MA',
+    'MI',
+    'MN',
+    'MS',
+    'MO',
+    'MT',
+    'NE',
+    'NV',
+    'NH',
+    'NJ',
+    'NM',
+    'NY',
+    'NC',
+    'ND',
+    'OH',
+    'OK',
+    'OR',
+    'PA',
+    'RI',
+    'SC',
+    'SD',
+    'TN',
+    'TX',
+    'UT',
+    'VT',
+    'VA',
+    'WA',
+    'WV',
+    'WI',
+    'WY'
   ];
 
   // Define FocusNodes for the fields
@@ -101,9 +146,8 @@ class _OrderScreenState extends State<OrderScreen> {
           .get();
 
       // Extract addresses and remove duplicates
-      Set<String> addressSet = ordersSnapshot.docs
-          .map((doc) => doc['address'] as String)
-          .toSet();
+      Set<String> addressSet =
+          ordersSnapshot.docs.map((doc) => doc['address'] as String).toSet();
 
       // Take the first three unique addresses
       List<String> addresses = addressSet.take(3).toList();
@@ -196,7 +240,10 @@ class _OrderScreenState extends State<OrderScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(address),
+                        child: Text(
+                          address,
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                       if (idx != _previousAddresses.length - 1)
                         Divider(color: Colors.white, thickness: 1),
@@ -216,8 +263,17 @@ class _OrderScreenState extends State<OrderScreen> {
                 border: OutlineInputBorder(),
               ),
               dropdownColor: Colors.black87,
+              selectedItemBuilder: (BuildContext context) {
+                return _previousAddresses.map((String address) {
+                  return Text(
+                    address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white),
+                  );
+                }).toList();
+              },
             ),
-
             SizedBox(height: 16.0),
             Text(
               'Or enter a new address:',
@@ -358,7 +414,8 @@ class _OrderScreenState extends State<OrderScreen> {
                   if (!mounted) return;
                   setState(() {
                     _hasOrdered = true;
-                    _mostRecentOrderStatus = 'pending'; // Assuming new order is pending
+                    _mostRecentOrderStatus =
+                        'pending'; // Assuming new order is pending
                     // Update the local addresses list
                     if (!_previousAddresses.contains(address)) {
                       // Insert the new address at the beginning
@@ -393,8 +450,8 @@ class _OrderScreenState extends State<OrderScreen> {
                   padding: EdgeInsets.all(8.0),
                   child: Text(
                     'Done',
-                    style:
-                        TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.blue, fontWeight: FontWeight.bold),
                   ),
                 ),
               );

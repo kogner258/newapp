@@ -31,9 +31,10 @@ class _HomeScreenState extends State<HomeScreen> {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('albums')
           .orderBy('createdAt', descending: true)
-          .limit(10)
+          .limit(18)
           .get();
-      List<String> fetchedImgList = snapshot.docs.map((doc) => doc['coverUrl'] as String).toList();
+      List<String> fetchedImgList =
+          snapshot.docs.map((doc) => doc['coverUrl'] as String).toList();
 
       setState(() {
         imgList = fetchedImgList;
