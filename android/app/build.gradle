@@ -11,13 +11,7 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.withReader('UTF-8') { reader ->
         keystoreProperties.load(reader)
     }
-    println "Keystore properties loaded:"
-    println "keyAlias: ${keystoreProperties['keyAlias']}"
-    println "storeFile: ${keystoreProperties['storeFile']}"
-    println "storePassword: ${keystoreProperties['storePassword']}"
-} else {
-    println "key.properties file not found at ${keystorePropertiesFile.path}"
-}
+} 
 
 
 def localProperties = new Properties()
