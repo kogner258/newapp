@@ -1,4 +1,4 @@
-package com.example.dissonantapp2
+package com.dissonant.dissonantapp2
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine

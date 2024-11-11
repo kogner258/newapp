@@ -46,7 +46,11 @@ dependencies:
   keyboard_actions: ^4.0.0  # Add this line
  # cupertino_icons: ^1.0.6
   flutter_launcher_icons: ^0.14.1
-  flutter_native_splash: ^2.2.17 # Add this line
+  flutter_native_splash: ^2.2.18  # Replace with the latest version
+  cached_network_image: ^3.2.1
+  firebase_crashlytics: ^4.1.4
+
+
 
 
 flutter_icons:
@@ -97,8 +101,7 @@ flutter:
     - assets/ordericon.png
     - assets/profileicon.png
     - assets/emptycdcase.png
-
-
+    - assets/spineasset.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -11,6 +11,9 @@ const String adminDashboardRoute = '/admin_dashboard';
 const String tasteProfileRoute = '/taste_profile';
 const String returnAlbumRoute = '/return_album';
 const String paymentRoute = '/payment';
+const String feedRoute = '/feed';
+const String wishlistRoute = '/wishlist';
+
 
 
 

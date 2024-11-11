@@ -23,17 +23,29 @@ class FirestoreService {
   }
 
   // Add user to the users collection
+// Add user to the users collection and create public profile
   Future<void> addUser(
       String userId, String username, String email, String country) async {
+    // Create the main user document with private data
     await _firestore.collection('users').doc(userId).set({
-      'username': username,
       'email': email,
       'country': country,
       'addresses': [],
       'hasOrdered': false,
       'tasteProfile': null,
       'createdAt': FieldValue.serverTimestamp(),
-      // Add other user-related fields as needed
+      // Add other private user-related fields as needed
+    });
+
+    // Create the public profile in the 'public' subcollection
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('public')
+        .doc('profile')
+        .set({
+      'username': username,
+      // Add other public fields if necessary
     });
   }
 
@@ -41,6 +53,7 @@ class FirestoreService {
       String orderId, bool returnConfirmed) async {
     await _firestore.collection('orders').doc(orderId).update({
       'returnConfirmed': returnConfirmed,
+      'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
     });
   }
 
@@ -55,6 +68,7 @@ class FirestoreService {
 
     await _firestore.collection('users').doc(userId).update({
       'hasOrdered': true,
+      'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
     });
   }
 
@@ -62,55 +76,33 @@ class FirestoreService {
     await _firestore.collection('orders').doc(orderId).update({
       'status': 'sent',
       'details.albumId': albumId,
+      'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
     });
   }
 
   Future<void> updateOrderStatus(String orderId, String status) async {
-    await _firestore
-        .collection('orders')
-        .doc(orderId)
-        .update({'status': status});
+    await _firestore.collection('orders').doc(orderId).update({
+      'status': status,
+      'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
+    });
 
     if (status == 'returned' || status == 'kept') {
       DocumentSnapshot orderDoc =
           await _firestore.collection('orders').doc(orderId).get();
       String userId = orderDoc['userId'];
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .update({'hasOrdered': false});
+      await _firestore.collection('users').doc(userId).update({
+        'hasOrdered': false,
+        'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
+      });
     }
-  }
-
-  Future<DocumentSnapshot> getUserStats(String userId) async {
-    return await _firestore.collection('users').doc(userId).get();
-  }
-
-  Future<Map<String, int>> getUserAlbumStats(String userId) async {
-    final QuerySnapshot keptAlbumsQuery = await _firestore
-        .collection('orders')
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: 'kept')
-        .get();
-
-    final QuerySnapshot sentBackAlbumsQuery = await _firestore
-        .collection('orders')
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: 'returnedConfirmed')
-        .get();
-
-    return {
-      'albumsKept': keptAlbumsQuery.docs.length,
-      'albumsSentBack': sentBackAlbumsQuery.docs.length,
-    };
   }
 
   Future<void> submitFeedback(
       String orderId, Map<String, dynamic> feedback) async {
-    await _firestore
-        .collection('orders')
-        .doc(orderId)
-        .update({'feedback': feedback});
+    await _firestore.collection('orders').doc(orderId).update({
+      'feedback': feedback,
+      'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
+    });
   }
 
   Future<bool> isAdmin(String userId) async {
@@ -153,9 +145,26 @@ class FirestoreService {
       'quality': quality,
       'coverUrl': coverUrl,
       'createdAt': FieldValue.serverTimestamp(),
-
     });
     return albumRef;
+  }
+
+  Future<void> addToWishlist({
+    required String userId,
+    required String albumId,
+    required String albumName,
+    required String albumImageUrl,
+  }) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('wishlist')
+        .doc(albumId)
+        .set({
+      'albumName': albumName,
+      'albumImageUrl': albumImageUrl,
+      'dateAdded': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<DocumentSnapshot> getAlbumById(String albumId) async {
@@ -172,6 +181,7 @@ class FirestoreService {
       await _firestore.collection('orders').doc(orderId).update({
         'returnConfirmed': true,
         'status': 'returnedConfirmed', // Update the status if needed
+        'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
       });
     } catch (e) {
       print('Error confirming return: $e');
@@ -185,5 +195,28 @@ class FirestoreService {
       return userDoc['previousAddresses'];
     }
     return [];
+  }
+
+  Future<Map<String, int>> getUserAlbumStats(String userId) async {
+    final QuerySnapshot keptAlbumsQuery = await _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: 'kept')
+        .get();
+
+    final QuerySnapshot sentBackAlbumsQuery = await _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: userId)
+        .where('status', isEqualTo: 'returnedConfirmed')
+        .get();
+
+    return {
+      'albumsKept': keptAlbumsQuery.docs.length,
+      'albumsSentBack': sentBackAlbumsQuery.docs.length,
+    };
+  }
+
+  Future<DocumentSnapshot> getUserStats(String userId) async {
+    return await _firestore.collection('users').doc(userId).get();
   }
 }

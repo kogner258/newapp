@@ -1,9 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.dissonantapp2">
+    package="com.dissonant.dissonantapp2">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="dissonantapp2"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

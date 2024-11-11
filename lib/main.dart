@@ -1,12 +1,14 @@
 import 'package:dissonantapp2/screens/payment_screen.dart';
 import 'package:dissonantapp2/screens/return_album_screen.dart';
 import 'package:dissonantapp2/screens/taste_profile_screen.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'navigator_service.dart';
 import 'routes.dart';
+import 'screens/feed_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/mymusic_screen.dart';
 import 'screens/order_screen.dart';
@@ -17,30 +19,42 @@ import 'screens/registration_screen.dart';
 import 'screens/emailverification_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'models/order_model.dart';
+import 'screens/wishlist_screen.dart';
 import 'widgets/app_bar_widget.dart';
 import 'widgets/bottom_navigation_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-// **Add these imports**
-import 'package:flutter_stripe/flutter_stripe.dart'; // Import the Stripe package
-import 'package:flutter/services.dart'; // For SystemChrome
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart'; // Import the flutter_native_splash package
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Preserve the splash screen
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
-  // **Set the app to portrait mode only**
-  await SystemChrome.setPreferredOrientations([
+   FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    // You can log the error to an external service here
+  };
+  
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+  // Set the app to portrait mode only (without awaiting)
+  SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
 
   // **Initialize Firebase**
   await Firebase.initializeApp();
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
   // **Set the Stripe publishable key**
-  Stripe.publishableKey = 'pk_test_51ODzOACnvJAFsDZ0uGFJt7YGt07xRELgnnVdrQ23l64HGVcU41OtkFIzDCgnqOZJTduEnH8pl3GxUZ98qKHrfGo400jbVXvUrz';
+  Stripe.publishableKey = 'pk_test_...';
 
   // **Initialize Stripe settings (optional)**
   await Stripe.instance.applySettings();
+
+  // Remove the splash screen after initialization is complete
+  FlutterNativeSplash.remove();
 
   runApp(MyApp());
 }
@@ -92,12 +106,15 @@ class MyApp extends StatelessWidget {
           forgotPasswordRoute: (context) => ForgotPasswordScreen(),
           emailVerificationRoute: (context) => EmailVerificationScreen(),
           tasteProfileRoute: (context) => TasteProfileScreen(),
+          wishlistRoute: (context) => WishlistScreen(),
+          feedRoute: (context) => FeedScreen(),
         },
         home: AuthenticationWrapper(),
       ),
     );
   }
 }
+
 
 class AuthenticationWrapper extends StatelessWidget {
   @override

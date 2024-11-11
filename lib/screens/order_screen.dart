@@ -214,7 +214,7 @@ class _OrderScreenState extends State<OrderScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Where should we send your music?',
+            'Where should we send your CD?',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -404,7 +404,7 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
           SizedBox(height: 16.0),
           RetroButton(
-            text: 'Order Your CD',
+            text: 'Place Order',
             onPressed: () {
               FocusScope.of(context).unfocus(); // Dismiss the keyboard
               if (_formKey.currentState?.validate() ?? false) {

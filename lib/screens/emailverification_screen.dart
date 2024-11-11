@@ -3,6 +3,8 @@ import 'package:dissonantapp2/main.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../routes.dart';
+import '../widgets/grainy_background_widget.dart';
+import 'how_it_works_screen.dart';
 import 'login_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
@@ -38,7 +40,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
     if (isEmailVerified) {
       // Navigate to Home Screen or desired screen
-      Navigator.pushReplacementNamed(context, tasteProfileRoute);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HowItWorksPage(),
+        ),
+      );
     }
   }
 
@@ -77,48 +84,52 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         title: Text('Verify Your Email'),
         automaticallyImplyLeading: false,
       ),
-      body: Center(
-        child: isLoading
-            ? CircularProgressIndicator()
-            : Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'A verification email has been sent to your email address. Please verify to continue.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    SizedBox(height: 16.0),
-                    if (message.isNotEmpty)
+      body: BackgroundWidget(
+        child: Center(
+          child: isLoading
+              ? CircularProgressIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Text(
-                        message,
-                        style: TextStyle(
-                          color: message.contains('sent')
-                              ? Colors.green
-                              : Colors.red,
-                        ),
+                        'A verification email has been sent to your email address. Please verify to continue.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
                       ),
-                    SizedBox(height: 16.0),
-                    ElevatedButton(
-                      onPressed: _sendVerificationEmail,
-                      child: Text('Resend Verification Email'),
-                    ),
-                    SizedBox(height: 8.0),
-                    ElevatedButton(
-                      onPressed: _checkEmailVerification,
-                      child: Text('I have Verified'),
-                    ),
-                    SizedBox(height: 8.0),
-                    TextButton(
-                      onPressed: _signOut,
-                      child: Text('Cancel'),
-                    ),
-                  ],
+                      SizedBox(height: 16.0),
+                      if (message.isNotEmpty)
+                        Text(
+                          message,
+                          style: TextStyle(
+                            color: message.contains('sent')
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        ),
+                      SizedBox(height: 16.0),
+                      ElevatedButton(
+                        onPressed: _sendVerificationEmail,
+                        child: Text('Resend Verification Email'),
+                      ),
+                      SizedBox(height: 8.0),
+                      ElevatedButton(
+                        onPressed: _checkEmailVerification,
+                        child: Text('I have Verified'),
+                      ),
+                      SizedBox(height: 8.0),
+                      TextButton(
+                        onPressed: _signOut,
+                        child: Text('Cancel'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }
+
+
 }

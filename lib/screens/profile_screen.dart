@@ -10,7 +10,8 @@ import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidge
 import '../widgets/stats_bar_widget.dart'; // Import the StatsBar widget
 import '../widgets/profile_picture_selector_widget.dart'; // Import the ProfilePictureSelector
 import '../widgets/retro_button_widget.dart'; // Import the RetroButtonWidget
-import '../widgets/retro_form_container_widget.dart'; // Import the RetroFormContainerWidget
+import '../widgets/retro_form_container_widget.dart';
+import 'wishlist_screen.dart'; // Import the RetroFormContainerWidget
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -95,6 +96,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     albumsKept: _albumsKept,
                   ),
                 ),
+              SizedBox(height: 20),
+              //New Wishlist Button
+              RetroButton(
+                text: 'Wishlist',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => WishlistScreen()),
+                  );
+                },
+                color: Color(0xFFFFA500), // Orange color for the button
+                fixedHeight: true,
+              ),
               SizedBox(height: 20),
               RetroButton(
                 text: 'Edit Taste Profile',
