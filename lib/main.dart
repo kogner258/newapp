@@ -1,6 +1,3 @@
-import 'package:dissonantapp2/screens/payment_screen.dart';
-import 'package:dissonantapp2/screens/return_album_screen.dart';
-import 'package:dissonantapp2/screens/taste_profile_screen.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,18 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'navigator_service.dart';
 import 'routes.dart';
-import 'screens/feed_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/mymusic_screen.dart';
 import 'screens/order_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/registration_screen.dart';
 import 'screens/emailverification_screen.dart';
-import 'screens/forgot_password_screen.dart';
 import 'models/order_model.dart';
-import 'screens/wishlist_screen.dart';
 import 'widgets/app_bar_widget.dart';
 import 'widgets/bottom_navigation_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,38 +20,50 @@ import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart'; // Import the flutter_native_splash package
 
 void main() async {
-  // Preserve the splash screen
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
 
-   FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    // You can log the error to an external service here
-  };
-  
+  // Preserve the splash screen
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Set the app to portrait mode only (without awaiting)
-  SystemChrome.setPreferredOrientations([
+  // Set the app to portrait mode only
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
 
-  // **Initialize Firebase**
+  // Initialize Firebase
   await Firebase.initializeApp();
+
+  // Initialize Crashlytics
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-
-  // **Set the Stripe publishable key**
-  Stripe.publishableKey = 'pk_test_...';
-
-  // **Initialize Stripe settings (optional)**
-  await Stripe.instance.applySettings();
 
   // Remove the splash screen after initialization is complete
   FlutterNativeSplash.remove();
 
+  // Run the app
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  // Asynchronous initialization can be handled here
+  @override
+  void initState() {
+    super.initState();
+    _initializeStripe();
+  }
+
+  Future<void> _initializeStripe() async {
+    // Set your Stripe publishable key
+    Stripe.publishableKey = 'pk_test_51ODzOACnvJAFsDZ0uGFJt7YGt07xRELgnnVdrQ23l64HGVcU41OtkFIzDCgnqOZJTduEnH8pl3GxUZ98qKHrfGo400jbVXvUrz'; // Replace with your actual key
+
+    // Optionally, set the Stripe merchant identifier and other settings
+    await Stripe.instance.applySettings();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -71,13 +75,13 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           brightness: Brightness.dark,
           primaryColor: Color(0xFFFFA500), // Orange
-          scaffoldBackgroundColor: Colors.black, // Dark Grey
+          scaffoldBackgroundColor: Colors.black,
           colorScheme: ColorScheme.dark(
-            primary: Color(0xFFFFA500), // Orange
-            primaryContainer: Color(0xFFE59400), // Darker Orange
-            secondary: Color(0xFFFF4500), // Bright Orange
-            secondaryContainer: Color(0xFFCC3700), // Darker Bright Orange
-            surface: Colors.black, // Light Grey
+            primary: Color(0xFFFFA500),
+            primaryContainer: Color(0xFFE59400),
+            secondary: Color(0xFFFF4500),
+            secondaryContainer: Color(0xFFCC3700),
+            surface: Colors.black,
             error: Colors.red,
             onPrimary: Colors.white,
             onSecondary: Colors.white,
@@ -98,23 +102,13 @@ class MyApp extends StatelessWidget {
         routes: {
           welcomeRoute: (context) => WelcomeScreen(),
           homeRoute: (context) => HomeScreen(),
-          orderRoute: (context) => OrderScreen(),
-          myMusicRoute: (context) => MyMusicScreen(),
-          profileRoute: (context) => ProfileScreen(),
-          loginRoute: (context) => LoginScreen(),
-          registrationRoute: (context) => RegistrationScreen(),
-          forgotPasswordRoute: (context) => ForgotPasswordScreen(),
-          emailVerificationRoute: (context) => EmailVerificationScreen(),
-          tasteProfileRoute: (context) => TasteProfileScreen(),
-          wishlistRoute: (context) => WishlistScreen(),
-          feedRoute: (context) => FeedScreen(),
+          // Add other routes here
         },
         home: AuthenticationWrapper(),
       ),
     );
   }
 }
-
 
 class AuthenticationWrapper extends StatelessWidget {
   @override
@@ -138,6 +132,9 @@ class AuthenticationWrapper extends StatelessWidget {
     );
   }
 }
+
+// Include other classes like MyHomePage, etc., here or in separate files as needed.
+
 
 class MyHomePage extends StatefulWidget {
   @override
