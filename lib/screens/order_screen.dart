@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
-import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidget
-import '../widgets/retro_button_widget.dart'; // Import the RetroButtonWidget
-import 'package:keyboard_actions/keyboard_actions.dart'; // Corrected import
+import '../widgets/grainy_background_widget.dart';
+import '../widgets/retro_button_widget.dart';
+import 'package:keyboard_actions/keyboard_actions.dart';
 
 class OrderScreen extends StatefulWidget {
   @override
@@ -15,19 +15,20 @@ class _OrderScreenState extends State<OrderScreen> {
   final _formKey = GlobalKey<FormState>();
   final FirestoreService _firestoreService = FirestoreService();
 
-  String _firstName = '';
-  String _lastName = '';
-  String _address = '';
-  String _city = '';
-  String _state = '';
-  String _zipcode = '';
-  String? _selectedAddress;
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _zipcodeController = TextEditingController();
 
+  String _state = '';
+  String? _selectedAddress;
+  bool _isNewAddress = true;
   bool _hasOrdered = false;
   bool _isLoading = true;
   String _mostRecentOrderStatus = '';
 
-  List<String> _previousAddresses = []; // To store previous addresses
+  List<String> _previousAddresses = [];
 
   final List<String> _states = [
     'AL',
@@ -82,24 +83,26 @@ class _OrderScreenState extends State<OrderScreen> {
     'WY'
   ];
 
-  // Define FocusNodes for the fields
   final FocusNode _zipcodeFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _fetchMostRecentOrderStatus();
-    _loadPreviousAddresses(); // Load previous addresses from orders
+    _loadPreviousAddresses();
   }
 
   @override
   void dispose() {
-    // Dispose of the FocusNodes
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
     _zipcodeFocusNode.dispose();
+    _zipcodeController.dispose();
     super.dispose();
   }
 
-  /// Fetches the most recent order based on the timestamp field
   Future<void> _fetchMostRecentOrderStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -117,24 +120,19 @@ class _OrderScreenState extends State<OrderScreen> {
         if (!mounted) return;
         setState(() {
           _mostRecentOrderStatus = status;
-          if (status == 'kept' || status == 'returnedConfirmed') {
-            _hasOrdered = false; // User can place a new order
-          } else {
-            _hasOrdered = true; // User cannot place a new order
-          }
+          _hasOrdered = !(status == 'kept' || status == 'returnedConfirmed');
           _isLoading = false;
         });
       } else {
         if (!mounted) return;
         setState(() {
-          _hasOrdered = false; // No orders exist, user can place a new order
+          _hasOrdered = false;
           _isLoading = false;
         });
       }
     }
   }
 
-  /// Loads the last three previous addresses from the orders collection
   Future<void> _loadPreviousAddresses() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -142,14 +140,11 @@ class _OrderScreenState extends State<OrderScreen> {
           .collection('orders')
           .where('userId', isEqualTo: user.uid)
           .orderBy('timestamp', descending: true)
-          .limit(10) // Fetch last 10 orders to account for potential duplicates
+          .limit(10)
           .get();
 
-      // Extract addresses and remove duplicates
       Set<String> addressSet =
           ordersSnapshot.docs.map((doc) => doc['address'] as String).toSet();
-
-      // Take the first three unique addresses
       List<String> addresses = addressSet.take(3).toList();
 
       setState(() {
@@ -163,12 +158,10 @@ class _OrderScreenState extends State<OrderScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Let KeyboardActions handle the insets
+      resizeToAvoidBottomInset: false,
       body: BackgroundWidget(
         child: _isLoading
-            ? Center(
-                child: CircularProgressIndicator(),
-              )
+            ? Center(child: CircularProgressIndicator())
             : _hasOrdered
                 ? _buildPlaceOrderMessage(_mostRecentOrderStatus)
                 : KeyboardActions(
@@ -185,16 +178,12 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   Widget _buildPlaceOrderMessage(String status) {
-    String message;
-    if (status == 'pending' ||
-        status == 'sent' ||
-        status == 'new' ||
-        status == 'returned') {
-      message =
-          "Thanks for placing an order! You will be able to place another once this one is completed.";
-    } else {
-      message = "You can now place a new order.";
-    }
+    String message = (status == 'pending' ||
+            status == 'sent' ||
+            status == 'new' ||
+            status == 'returned')
+        ? "Thanks for placing an order! You will be able to place another once this one is completed."
+        : "You can now place a new order.";
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -216,39 +205,19 @@ class _OrderScreenState extends State<OrderScreen> {
           Text(
             'Where should we send your CD?',
             style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+                fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 16.0),
           if (_previousAddresses.isNotEmpty) ...[
-            Text(
-              'Use a previous address:',
-              style: TextStyle(color: Colors.white),
-            ),
+            Text('Use a previous address:',
+                style: TextStyle(color: Colors.white)),
             DropdownButtonFormField<String>(
               value: _selectedAddress,
-              items: _previousAddresses.asMap().entries.map((entry) {
-                int idx = entry.key;
-                String address = entry.value;
+              items: _previousAddresses.map((address) {
                 return DropdownMenuItem<String>(
                   value: address,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(
-                          address,
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      if (idx != _previousAddresses.length - 1)
-                        Divider(color: Colors.white, thickness: 1),
-                    ],
-                  ),
+                  child: Text(address, style: TextStyle(color: Colors.white)),
                 );
               }).toList(),
               onChanged: (value) {
@@ -259,109 +228,54 @@ class _OrderScreenState extends State<OrderScreen> {
                   }
                 });
               },
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(border: OutlineInputBorder()),
               dropdownColor: Colors.black87,
-              selectedItemBuilder: (BuildContext context) {
-                return _previousAddresses.map((String address) {
-                  return Text(
-                    address,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white),
-                  );
-                }).toList();
-              },
             ),
             SizedBox(height: 16.0),
-            Text(
-              'Or enter a new address:',
-              style: TextStyle(color: Colors.white),
-            ),
+            Text('Or enter a new address:',
+                style: TextStyle(color: Colors.white)),
           ],
           SizedBox(height: 16.0),
           TextFormField(
-            initialValue: _firstName,
+            controller: _firstNameController,
             decoration: InputDecoration(
-              labelText: 'First Name',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your first name';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _firstName = value;
-              });
-            },
+                labelText: 'First Name', border: OutlineInputBorder()),
+            validator: (value) => value == null || value.isEmpty
+                ? 'Please enter your first name'
+                : null,
           ),
           SizedBox(height: 16.0),
           TextFormField(
-            initialValue: _lastName,
+            controller: _lastNameController,
             decoration: InputDecoration(
-              labelText: 'Last Name',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your last name';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _lastName = value;
-              });
-            },
+                labelText: 'Last Name', border: OutlineInputBorder()),
+            validator: (value) => value == null || value.isEmpty
+                ? 'Please enter your last name'
+                : null,
           ),
           SizedBox(height: 16.0),
           TextFormField(
-            initialValue: _address,
+            controller: _addressController,
             decoration: InputDecoration(
-              labelText: 'Address (including apartment number)',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your address';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _address = value;
-              });
-            },
+                labelText: 'Address (including apartment number)',
+                border: OutlineInputBorder()),
+            validator: (value) => value == null || value.isEmpty
+                ? 'Please enter your address'
+                : null,
           ),
           SizedBox(height: 16.0),
           TextFormField(
-            initialValue: _city,
+            controller: _cityController,
             decoration: InputDecoration(
-              labelText: 'City',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your city';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _city = value;
-              });
-            },
+                labelText: 'City', border: OutlineInputBorder()),
+            validator: (value) => value == null || value.isEmpty
+                ? 'Please enter your city'
+                : null,
           ),
           SizedBox(height: 16.0),
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
-              labelText: 'State',
-              border: OutlineInputBorder(),
-            ),
+                labelText: 'State', border: OutlineInputBorder()),
             value: _state.isNotEmpty ? _state : null,
             items: _states.map((String state) {
               return DropdownMenuItem<String>(
@@ -374,53 +288,36 @@ class _OrderScreenState extends State<OrderScreen> {
                 _state = newValue ?? '';
               });
             },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select your state';
-              }
-              return null;
-            },
+            validator: (value) => value == null || value.isEmpty
+                ? 'Please select your state'
+                : null,
           ),
           SizedBox(height: 16.0),
           TextFormField(
-            initialValue: _zipcode,
-            focusNode: _zipcodeFocusNode, // Assign the FocusNode
+            controller: _zipcodeController,
+            focusNode: _zipcodeFocusNode,
             decoration: InputDecoration(
-              labelText: 'Zipcode',
-              border: OutlineInputBorder(),
-            ),
+                labelText: 'Zipcode', border: OutlineInputBorder()),
             keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter your zipcode';
-              }
-              return null;
-            },
-            onChanged: (value) {
-              setState(() {
-                _zipcode = value;
-              });
-            },
+            validator: (value) => value == null || value.isEmpty
+                ? 'Please enter your zipcode'
+                : null,
           ),
           SizedBox(height: 16.0),
           RetroButton(
             text: 'Place Order',
             onPressed: () {
-              FocusScope.of(context).unfocus(); // Dismiss the keyboard
+              FocusScope.of(context).unfocus();
               if (_formKey.currentState?.validate() ?? false) {
                 final address =
-                    '$_firstName $_lastName\n$_address\n$_city, $_state $_zipcode';
+                    '${_firstNameController.text} ${_lastNameController.text}\n${_addressController.text}\n${_cityController.text}, $_state ${_zipcodeController.text}';
                 _firestoreService.addOrder(user?.uid ?? '', address).then((_) {
                   if (!mounted) return;
                   setState(() {
                     _hasOrdered = true;
-                    _mostRecentOrderStatus =
-                        'pending'; // Assuming new order is pending
-                    // Update the local addresses list
+                    _mostRecentOrderStatus = 'pending';
                     if (!_previousAddresses.contains(address)) {
-                      // Insert the new address at the beginning
                       _previousAddresses.insert(0, address);
-                      // Keep only the last three addresses
                       if (_previousAddresses.length > 3) {
                         _previousAddresses = _previousAddresses.sublist(0, 3);
                       }
@@ -429,7 +326,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 });
               }
             },
-            color: Color(0xFFFFA500), // Orange color for the retro button
+            color: Color(0xFFFFA500),
           ),
         ],
       ),
@@ -448,11 +345,9 @@ class _OrderScreenState extends State<OrderScreen> {
                 onTap: () => node.unfocus(),
                 child: Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    'Done',
-                    style: TextStyle(
-                        color: Colors.blue, fontWeight: FontWeight.bold),
-                  ),
+                  child: Text('Done',
+                      style: TextStyle(
+                          color: Colors.blue, fontWeight: FontWeight.bold)),
                 ),
               );
             },
@@ -466,18 +361,18 @@ class _OrderScreenState extends State<OrderScreen> {
     List<String> parts = address.split('\n');
     if (parts.length == 3) {
       List<String> nameParts = parts[0].split(' ');
-      if (nameParts.length >= 2) {
-        _firstName = nameParts[0];
-        _lastName = nameParts.sublist(1).join(' '); // Handle middle names
+      if (nameParts.isNotEmpty) {
+        _firstNameController.text = nameParts.first;
+        _lastNameController.text = nameParts.skip(1).join(' ');
       }
-      _address = parts[1];
+      _addressController.text = parts[1].trim();
       List<String> cityStateZip = parts[2].split(', ');
       if (cityStateZip.length == 2) {
-        _city = cityStateZip[0];
+        _cityController.text = cityStateZip[0].trim();
         List<String> stateZip = cityStateZip[1].split(' ');
         if (stateZip.length >= 2) {
-          _state = stateZip[0];
-          _zipcode = stateZip.sublist(1).join(' ');
+          _state = stateZip[0].trim();
+          _zipcodeController.text = stateZip.sublist(1).join(' ').trim();
         }
       }
     }

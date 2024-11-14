@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchFeedItems() async {
     QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
         .collection('orders')
-        .where('status', whereIn: ['kept', 'returnConfirmed'])
+        .where('status', whereIn: ['kept', 'returnedConfirmed'])
         .orderBy('timestamp', descending: true)
         .get();
 
@@ -144,52 +144,55 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate the total reserved height for spines
-    final double totalSpinesHeight = spineHeight * maxSpines;
+    // Calculate total height for spines dynamically based on screen height
+    final double totalSpinesHeight = MediaQuery.of(context).size.height *
+        0.15; // Adjust percentage as needed
 
     return Scaffold(
       body: BackgroundWidget(
         child: _isLoading
             ? Center(child: CircularProgressIndicator())
-            : Stack(
-                children: [
-                  // Spines at the bottom, behind the main content
-                  _buildSpines(totalSpinesHeight),
+            : SafeArea(
+                // Ensures content fits within safe areas on the screen
+                child: Stack(
+                  children: [
+                    // Spines at the bottom, behind the main content
+                    _buildSpines(totalSpinesHeight),
 
-                  // Main content with reserved space at the bottom
-                  Padding(
-                    padding: EdgeInsets.only(bottom: totalSpinesHeight),
-                    child: PageView.builder(
-                      controller: _pageController,
-                      scrollDirection: Axis.vertical,
-                      itemCount: _feedItems.length,
-                      itemBuilder: (context, index) {
-                        final item = _feedItems[index];
-                        return _buildAnimatedFeedItem(item, index);
-                      },
+                    // Main content with dynamic bottom padding
+                    Padding(
+                      padding: EdgeInsets.only(bottom: totalSpinesHeight),
+                      child: PageView.builder(
+                        controller: _pageController,
+                        scrollDirection: Axis.vertical,
+                        itemCount: _feedItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _feedItems[index];
+                          return _buildAnimatedFeedItem(item, index);
+                        },
+                      ),
                     ),
-                  ),
 
-                  // Title text at the top
-                  Positioned(
-                    top: 20.0,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Text(
-                        'My Feed',
-                        style: TextStyle(
-                          fontSize: 26.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                    // Title text at the top
+                    Positioned(
+                      top: 5.0,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          'My Feed',
+                          style: TextStyle(
+                            fontSize: 12.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
       ),
-
     );
   }
 
@@ -219,8 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Align(
       alignment: Alignment.topCenter,
       child: Padding(
-        padding:
-            EdgeInsets.only(top: 85.0), // Adjust this value to slide content down
+        padding: EdgeInsets.only(
+            top: 40.0), // Adjust this value to slide content down
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -313,9 +316,10 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, child) {
             List<Widget> spineWidgets = [];
 
-            double page = _pageController.hasClients && _pageController.page != null
-                ? _pageController.page!
-                : _currentIndex.toDouble();
+            double page =
+                _pageController.hasClients && _pageController.page != null
+                    ? _pageController.page!
+                    : _currentIndex.toDouble();
 
             for (int i = 0; i < maxSpines; i++) {
               int spineIndex = _currentIndex + i + 1; // Corrected index
