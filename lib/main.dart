@@ -58,7 +58,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initializeStripe() async {
     // Set your Stripe publishable key
-    Stripe.publishableKey = 'pk_test_51ODzOACnvJAFsDZ0uGFJt7YGt07xRELgnnVdrQ23l64HGVcU41OtkFIzDCgnqOZJTduEnH8pl3GxUZ98qKHrfGo400jbVXvUrz'; // Replace with your actual key
+    Stripe.publishableKey = 'pk_live_51ODzOACnvJAFsDZ0COKFc7cuwsL2eAijLCxdMETnP8pGsydvkB221bJFeGKuynxSgzUQ0d9T7bDIxcCwcDcmqgDn004VZLJQio'; // Replace with your actual key
 
     // Optionally, set the Stripe merchant identifier and other settings
     await Stripe.instance.applySettings();

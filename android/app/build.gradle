@@ -22,7 +22,7 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = '13'
+def flutterVersionCode = '14'
 if (flutterVersionCode == null) {
     flutterVersionCode = '1'
 }
@@ -87,10 +87,10 @@ android {
     buildTypes {
         release {
             // Enables code shrinking, obfuscation, and optimization for release builds
-            minifyEnabled false
-            shrinkResources false
-            // Uncomment the following line if you have a ProGuard rules file
-            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
             signingConfig signingConfigs.release
         }
     }

@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const stripe = require('stripe')('sk_test_51ODzOACnvJAFsDZ0A1WjKAJOi3ZmTxilTnGkHIaFBumhwVZwufnzLRLeKMyG2z6HHozAtPE3xPjdXkunTREhBZSY00qaH93Ib3'); // Replace with your Stripe secret key
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const bodyParser = require('body-parser');
 const serverless = require('serverless-http');
 
