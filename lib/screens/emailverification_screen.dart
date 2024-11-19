@@ -119,10 +119,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         child: Text('I have Verified'),
                       ),
                       SizedBox(height: 8.0),
-                      TextButton(
-                        onPressed: _signOut,
-                        child: Text('Cancel'),
-                      ),
                     ],
                   ),
                 ),

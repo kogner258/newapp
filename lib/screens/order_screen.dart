@@ -178,12 +178,14 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   Widget _buildPlaceOrderMessage(String status) {
-    String message = (status == 'pending' ||
-            status == 'sent' ||
-            status == 'new' ||
-            status == 'returned')
-        ? "Thanks for placing an order! You will be able to place another once this one is completed."
-        : "You can now place a new order.";
+    String message;
+    if (status == 'returned') {
+      message = "Once we've confirmed your return you'll be able to order another album!";
+    } else if (status == 'pending' || status == 'sent' || status == 'new') {
+      message = "Thanks for placing an order! You will be able to place another once this one is completed.";
+    } else {
+      message = "You can now place a new order.";
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16.0),

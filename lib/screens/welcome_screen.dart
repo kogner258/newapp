@@ -12,7 +12,7 @@ class WelcomeScreen extends StatelessWidget {
           Positioned.fill(
             child: Image.asset(
               'assets/welcome_background.png',  // Path to your background image
-              fit: BoxFit.cover,        // Make the image cover the whole screen
+              fit: BoxFit.contain,        // Make the image cover the whole screen
             ),
           ),
           // Foreground content
@@ -24,7 +24,8 @@ class WelcomeScreen extends StatelessWidget {
               Center(
                 child: Image.asset(
                   'assets/dissonantlogotext.png',  // Path to your logo image
-                  height: 70,  // Adjust logo size if needed
+                  height: 70,
+                  width: 350,  // Button width // Adjust logo size if needed
                 ),
               ),
               SizedBox(height: 16.0),  // Space between logo and text

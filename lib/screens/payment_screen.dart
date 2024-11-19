@@ -1,4 +1,5 @@
 import 'package:dissonantapp2/main.dart';
+import 'package:dissonantapp2/widgets/retro_button_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '/services/firestore_service.dart';
@@ -192,23 +193,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             ),
                           ),
                           SizedBox(width: 20.0),
-                          ElevatedButton(
+                          RetroButton(
+                            text: 'Purchase',
                             onPressed: _processPayment,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Color(0xFFFFA500), // Orange background
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.zero, // Square shape
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 16.0, horizontal: 32.0),
-                            ),
-                            child: Text(
-                              'Purchase',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16), // White text
-                            ),
+                            color: Color(0xFFFFA500), // Orange background to match the original
+                            fixedHeight: true,        // Adjust based on your layout needs
+                            shadowColor: Colors.black, // Optional: customize shadow color if needed
                           ),
                         ],
                       ),

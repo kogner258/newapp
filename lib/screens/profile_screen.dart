@@ -143,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
                     );
                   },
-                  color: Color(0xFFFFA500), // Orange color for the button
+                color: Color(0xFFFFA500), // Orange color for the button
                   fixedHeight: true,
                 ),
               ],

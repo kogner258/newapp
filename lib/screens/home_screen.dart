@@ -217,54 +217,68 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFeedItem(Map<String, dynamic> item) {
-    String actionText = item['status'] == 'kept' ? 'kept' : 'returned';
+  String actionText = item['status'] == 'kept' ? 'kept' : 'returned';
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Padding(
-        padding: EdgeInsets.only(
-            top: 40.0), // Adjust this value to slide content down
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // User action text
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0),
-              child: Row(
-                children: [
-                  // Username and action
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      '${item['username']} $actionText',
-                      style: TextStyle(
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+  return Align(
+    alignment: Alignment.topCenter,
+    child: Padding(
+      padding: EdgeInsets.only(
+          top: 40.0), // Adjust this value to slide content down
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // User action text
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.0),
+            child: Row(
+              children: [
+                // Username and action
+                Expanded(
+                  flex: 1,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${item['username']}',
+                        style: TextStyle(
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.left,
                       ),
-                      textAlign: TextAlign.left,
-                    ),
+                      SizedBox(height: 4.0), // Optional spacing between lines
+                      Text(
+                        actionText,
+                        style: TextStyle(
+                          fontSize: 16.0, // Slightly smaller font size
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 10.0), // Space between texts
+                ),
+                SizedBox(width: 10.0), // Space between texts
 
-                  // Album name
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      '${item['albumName']}',
-                      style: TextStyle(
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.right,
+                // Album name
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    '${item['albumName']}',
+                    style: TextStyle(
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
                     ),
+                    textAlign: TextAlign.right,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            SizedBox(height: 16.0),
+          ),
+          SizedBox(height: 16.0),
 
             // Album image with spinner while loading
             SizedBox(
@@ -295,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   item['albumImageUrl'],
                 );
               },
-              color: Color(0xFFFFA500),
+              color: Colors.white,
               fixedHeight: true,
             ),
           ],

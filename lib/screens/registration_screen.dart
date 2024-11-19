@@ -1,6 +1,8 @@
 // registration_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import '../routes.dart';
 import '/services/firestore_service.dart';
 
@@ -33,6 +35,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         errorMessage = '';
       });
 
+      User? user;
+
       try {
         // Step 1: Check if the username already exists
         bool usernameExists =
@@ -52,7 +56,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           email: email,
           password: password,
         );
-        User? user = userCredential.user;
+        user = userCredential.user;
 
         if (user == null) {
           throw Exception('User creation failed. Please try again.');
@@ -60,15 +64,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
         // Step 3: Update display name and send email verification
         await user.updateDisplayName(username);
+        await user.reload(); // Reload the user to ensure displayName is updated
         await user.sendEmailVerification();
 
-        // Step 4: Reserve the username in Firestore
-        await _firestoreService.addUsername(username, user.uid);
+        // Step 4: Use a batch write for Firestore operations
+        WriteBatch batch = FirebaseFirestore.instance.batch();
 
-        // Step 5: Add user details to the 'users' collection
-        await _firestoreService.addUser(user.uid, username, email, country);
+        // Reserve the username
+        DocumentReference usernameRef =
+            FirebaseFirestore.instance.collection('usernames').doc(username);
+        batch.set(usernameRef, {'uid': user.uid});
 
-        // Step 6: Navigate to the email verification screen
+        // Add user details
+        DocumentReference userRef =
+            FirebaseFirestore.instance.collection('users').doc(user.uid);
+        batch.set(userRef, {
+          'username': username,
+          'email': email,
+          'country': country,
+          'createdAt': FieldValue.serverTimestamp(),
+          // Add other user details as needed
+        });
+
+        // Commit the batch
+        await batch.commit();
+
+        // Step 5: Navigate to the email verification screen
+        setState(() {
+          isLoading = false;
+        });
         Navigator.pushReplacementNamed(context, emailVerificationRoute);
       } on FirebaseAuthException catch (e) {
         setState(() {
@@ -81,35 +105,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           } else if (e.code == 'invalid-email') {
             errorMessage = 'The email address is invalid.';
           } else {
-            errorMessage =
-                e.message ?? 'Registration failed. Please try again.';
+            errorMessage = e.message ?? 'Registration failed. Please try again.';
           }
         });
-      } on FirebaseException catch (e) {
-        setState(() {
-          isLoading = false;
-          if (e.code == 'permission-denied') {
-            errorMessage = 'You do not have permission to perform this action.';
-          } else {
-            errorMessage = e.message ?? 'An error occurred. Please try again.';
+          } catch (e, stackTrace) {
+            setState(() {
+              isLoading = false;
+              errorMessage = 'An unexpected error occurred. Please try again later.';
+            });
+            // Log the exception
+            print('Registration error: $e');
+            print('Stack trace: $stackTrace');
           }
-        });
-
-        // Optional: Delete the user from FirebaseAuth if Firestore operation fails
-        try {
-          User? user = _auth.currentUser;
-          if (user != null) {
+ finally {
+        // If an error occurred and a user was created, delete the user
+        if (errorMessage.isNotEmpty && user != null) {
+          try {
             await user.delete();
+          } catch (deleteError) {
+            print('Error deleting user after failure: $deleteError');
           }
-        } catch (deleteError) {
-          print('Error deleting user after Firestore failure: $deleteError');
         }
-      } catch (e) {
-        setState(() {
-          isLoading = false;
-          errorMessage =
-              'An unexpected error occurred. Please try again later.';
-        });
       }
     }
   }
@@ -121,6 +137,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
     if (value.trim().length < 3) {
       return 'Username must be at least 3 characters long';
+    }
+    // Ensure username contains only letters, numbers, and underscores
+    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value.trim())) {
+      return 'Username can only contain letters, numbers, and underscores';
     }
     return null;
   }
@@ -143,9 +163,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (value.length < 8) {
       return 'Password must be at least 8 characters long';
     }
-  if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$').hasMatch(value)) {
-    return 'Password must contain letters and numbers';
-  }
+    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$').hasMatch(value)) {
+      return 'Password must contain letters and numbers';
+    }
     return null;
   }
 
@@ -302,7 +322,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     onPressed: isLoading ? null : _register,
                                     color: Color(0xFFD24407),
                                     fixedHeight: true,
-                                    shadowColor: Colors.black.withOpacity(0.9),
+                                    shadowColor:
+                                        Colors.black.withOpacity(0.9),
                                   ),
                                 ],
                               ),
@@ -378,22 +399,20 @@ class CustomWindowFrame extends StatelessWidget {
                   border:
                       Border.all(color: Colors.black, width: 2), // Black border
                   color: Color(
-                      0xFFF4F4F4), // Off-white color matching the Figma design
+                      0xFFF4F4F4), // Off-white color matching the design
                 ),
                 width: 20,
                 height: 20,
-                alignment: Alignment
-                    .center, // Center the content both horizontally and vertically
+                alignment: Alignment.center,
                 child: Text(
                   'X',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14, // Slightly adjust the font size
-                    height:
-                        1, // Adjust line height to better center the text vertically
+                    fontSize: 14,
+                    height: 1,
                     color: Colors.black, // Black "X"
                   ),
-                  textAlign: TextAlign.center, // Center the text within the box
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
@@ -444,8 +463,8 @@ class CustomFormContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      padding: EdgeInsets.only(
-          bottom: 12.0), // Adjusted padding to remove extra white space
+      padding:
+          EdgeInsets.only(bottom: 12.0), // Adjusted padding to remove extra space
       decoration: BoxDecoration(
         color: Color(0xFFF4F4F4),
         border: Border.all(
@@ -460,8 +479,7 @@ class CustomFormContainer extends StatelessWidget {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize
-            .min, // Ensure the column only takes up the necessary vertical space
+        mainAxisSize: MainAxisSize.min, // Only take necessary vertical space
         children: [
           CustomWindowFrame(), // Including window frame with the correct border
           child,

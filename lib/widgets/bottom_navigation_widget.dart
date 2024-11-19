@@ -12,40 +12,41 @@ class BottomNavigationWidget extends StatelessWidget {
       items: <BottomNavigationBarItem>[
         BottomNavigationBarItem(
           icon: Image.asset(
-           'assets/homeicon.png',
-           width: 28,
-           height:32,
+            'assets/homeicon.png',
+            width: 28,
+            height: 32,
           ),
           label: 'Home',
         ),
         BottomNavigationBarItem(
-           icon: Image.asset(
-           'assets/ordericon.png',
-           width: 32,
-           height:32,
+          icon: Image.asset(
+            'assets/ordericon.png',
+            width: 32,
+            height: 32,
           ),
           label: 'Order',
         ),
         BottomNavigationBarItem(
           icon: Image.asset(
-           'assets/mymusicicon.png',
-           width: 32,
-           height:32,
-          ),          
+            'assets/mymusicicon.png',
+            width: 32,
+            height: 32,
+          ),
           label: 'My Music',
         ),
         BottomNavigationBarItem(
-           icon: Image.asset(
-           'assets/profileicon.png',
-           width: 32,
-           height:32,
-          ), 
-            label: 'Profile',
+          icon: Image.asset(
+            'assets/profileicon.png',
+            width: 32,
+            height: 32,
+          ),
+          label: 'Profile',
         ),
       ],
       type: BottomNavigationBarType.fixed,
       currentIndex: currentIndex,
       selectedItemColor: Colors.orange,
+      backgroundColor: Color(0xFF1E1E1E), // Set the background color here
       onTap: onTap,
     );
   }

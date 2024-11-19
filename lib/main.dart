@@ -17,7 +17,7 @@ import 'widgets/bottom_navigation_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart'; // Import the flutter_native_splash package
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -95,16 +95,26 @@ class _MyAppState extends State<MyApp> {
             displayColor: Colors.white,
           ),
           appBarTheme: AppBarTheme(
-            color: Colors.black,
+            color: Color(0xFF1E1E1E), // A slightly lighter off-black
           ),
         ),
         navigatorKey: NavigatorService.navigatorKey,
         routes: {
           welcomeRoute: (context) => WelcomeScreen(),
           homeRoute: (context) => HomeScreen(),
+          emailVerificationRoute: (context) => EmailVerificationScreen(),
+
           // Add other routes here
         },
         home: AuthenticationWrapper(),
+
+        // Added builder to override textScaleFactor
+        builder: (BuildContext context, Widget? child) {
+          return MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+            child: child!,
+          );
+        },
       ),
     );
   }
@@ -117,7 +127,10 @@ class AuthenticationWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return Scaffold(
+            backgroundColor: Colors.black, // Match your app's background color
+            body: Center(child: CircularProgressIndicator()),
+          );
         } else if (snapshot.hasData) {
           User? user = snapshot.data;
           if (user != null && user.emailVerified) {
@@ -132,9 +145,6 @@ class AuthenticationWrapper extends StatelessWidget {
     );
   }
 }
-
-// Include other classes like MyHomePage, etc., here or in separate files as needed.
-
 
 class MyHomePage extends StatefulWidget {
   @override
