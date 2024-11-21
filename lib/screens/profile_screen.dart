@@ -4,14 +4,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
 import 'admin_dashboard_screen.dart';
-import 'taste_profile_screen.dart';
-import 'change_password_screen.dart';
 import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidget
 import '../widgets/stats_bar_widget.dart'; // Import the StatsBar widget
-import '../widgets/profile_picture_selector_widget.dart'; // Import the ProfilePictureSelector
 import '../widgets/retro_button_widget.dart'; // Import the RetroButtonWidget
 import '../widgets/retro_form_container_widget.dart';
 import 'wishlist_screen.dart'; // Import the RetroFormContainerWidget
+import 'options_screen.dart'; // Import OptionsScreen
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -84,8 +82,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 20),
-              // ProfilePictureSelector(),
-              // SizedBox(height: 20),
               if (_isLoading)
                 Center(child: CircularProgressIndicator())
               else
@@ -97,7 +93,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               SizedBox(height: 20),
-              //New Wishlist Button
               RetroButton(
                 text: 'Wishlist',
                 onPressed: () {
@@ -106,31 +101,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     MaterialPageRoute(builder: (context) => WishlistScreen()),
                   );
                 },
-                color: Color(0xFFFFA500), // Orange color for the button
+                color: Color(0xFFFFA500),
                 fixedHeight: true,
               ),
               SizedBox(height: 20),
               RetroButton(
-                text: 'Edit Taste Profile',
+                text: 'Options',
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => TasteProfileScreen()),
+                    MaterialPageRoute(builder: (context) => OptionsScreen()),
                   );
                 },
-                color: Color(0xFFFFA500), // Orange color for the button
-                fixedHeight: true,
-              ),
-              SizedBox(height: 20),
-              RetroButton(
-                text: 'Change Password',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ChangePasswordScreen()),
-                  );
-                },
-                color: Color(0xFFFFA500), // Orange color for the button
+                color: Color(0xFFFFA500),
                 fixedHeight: true,
               ),
               if (_isAdmin) ...[
@@ -143,12 +126,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       MaterialPageRoute(builder: (context) => AdminDashboardScreen()),
                     );
                   },
-                color: Color(0xFFFFA500), // Orange color for the button
+                  color: Color(0xFFFFA500),
                   fixedHeight: true,
                 ),
               ],
               Spacer(),
-              // Added message here
               Padding(
                 padding: EdgeInsets.symmetric(vertical: 20.0),
                 child: Text(
@@ -167,7 +149,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       MaterialPageRoute(builder: (context) => WelcomeScreen()),
                     );
                   },
-                  color: Colors.red, // Red color for the button
+                  color: Colors.red,
                   fixedHeight: true,
                 ),
             ],

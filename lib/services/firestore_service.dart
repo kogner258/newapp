@@ -17,6 +17,44 @@ class FirestoreService {
     });
   }
 
+  Future<void> deleteUserData(String userId) async {
+    WriteBatch batch = _firestore.batch();
+
+    // Delete user document in 'users' collection
+    DocumentReference userDocRef = _firestore.collection('users').doc(userId);
+    batch.delete(userDocRef);
+
+    // Delete public profile
+    DocumentReference publicProfileRef = userDocRef.collection('public').doc('profile');
+    batch.delete(publicProfileRef);
+
+    // Remove username from 'usernames' collection
+    // First, get the username
+    DocumentSnapshot publicProfileDoc = await publicProfileRef.get();
+    if (publicProfileDoc.exists && publicProfileDoc.data() != null) {
+      String username = publicProfileDoc['username'];
+      DocumentReference usernameDocRef = _firestore.collection('usernames').doc(username);
+      batch.delete(usernameDocRef);
+    }
+
+    // Delete user's wishlist items
+    CollectionReference wishlistRef = userDocRef.collection('wishlist');
+    QuerySnapshot wishlistSnapshot = await wishlistRef.get();
+    for (DocumentSnapshot doc in wishlistSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Delete user's orders
+    QuerySnapshot ordersSnapshot = await _firestore.collection('orders').where('userId', isEqualTo: userId).get();
+    for (DocumentSnapshot doc in ordersSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Commit the batch
+    await batch.commit();
+  }
+
+
   // Remove a username from the usernames collection
   Future<void> removeUsername(String username) async {
     await _firestore.collection('usernames').doc(username).delete();
