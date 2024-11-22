@@ -6,6 +6,7 @@ import 'taste_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Add this import
 
 class OptionsScreen extends StatefulWidget {
   @override
@@ -23,6 +24,32 @@ class _OptionsScreenState extends State<OptionsScreen> {
   }
 
   Future<void> _deleteAccount() async {
+    // Check for outstanding orders
+    bool hasOutstanding = await _firestoreService.hasOutstandingOrders(_user!.uid);
+
+    if (hasOutstanding) {
+      // Show message that the user must resolve outstanding orders
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Cannot Delete Account'),
+            content: Text(
+              'You must choose to keep or return any outstanding orders before you can delete your account.',
+            ),
+            actions: [
+              TextButton(
+                child: Text('OK'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          );
+        },
+      );
+      return; // Do not proceed further
+    }
+
+    // Proceed with account deletion
     bool? confirmDelete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -127,7 +154,7 @@ class _OptionsScreenState extends State<OptionsScreen> {
         elevation: 0,
       ),
       body: BackgroundWidget(
-        child: Center( // Center the content vertically
+        child: Center(
           child: Padding(
             padding: EdgeInsets.all(16.0),
             child: Stack(

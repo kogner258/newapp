@@ -17,6 +17,17 @@ class FirestoreService {
     });
   }
 
+  Future<bool> hasOutstandingOrders(String userId) async {
+    QuerySnapshot ordersSnapshot = await _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: userId)
+        .where('status', whereIn: ['sent', 'returned'])
+        .get();
+
+    return ordersSnapshot.docs.isNotEmpty;
+  }
+
+
   Future<void> deleteUserData(String userId) async {
     WriteBatch batch = _firestore.batch();
 
