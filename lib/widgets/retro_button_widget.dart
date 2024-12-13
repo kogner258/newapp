@@ -2,55 +2,63 @@ import 'package:flutter/material.dart';
 
 class RetroButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Color color;
   final bool fixedHeight;
   final Color shadowColor; // Custom shadow color
 
   const RetroButton({
+    Key? key,
     required this.text,
-    required this.onPressed,
-    this.color = const Color(0xFFD24407), // Default color
-    this.fixedHeight = false, // Allow control over height adjustment
-    this.shadowColor = Colors.black, // Default shadow color
-  });
+    this.onPressed, // Now nullable, allowing for a disabled state
+    this.color = const Color(0xFFD24407),
+    this.fixedHeight = false,
+    this.shadowColor = Colors.black,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicWidth( // Wrap with IntrinsicWidth to size button to text
+    final bool isEnabled = onPressed != null;
+
+    return IntrinsicWidth(
       child: Container(
         decoration: BoxDecoration(
           boxShadow: [
+            // Slight white outline
             BoxShadow(
-              color: Colors.white, // Thin white outline
-              offset: Offset(4.5, 4.5), // Slightly smaller offset than the shadow
+              color: Colors.white,
+              offset: Offset(4.5, 4.5),
               blurRadius: 0,
             ),
+            // Darker shadow offset for a retro 3D effect
             BoxShadow(
-              color: shadowColor.withOpacity(0.9), // Darker shadow color
-              offset: Offset(4, 4), // Slightly larger offset for more pronounced effect
+              color: shadowColor.withOpacity(0.9),
+              offset: Offset(4, 4),
               blurRadius: 0,
             ),
           ],
           borderRadius: BorderRadius.circular(4),
         ),
         child: GestureDetector(
-          onTap: onPressed,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.0), // Adjust padding as needed
-            height: fixedHeight ? 45 : 50, // Adjust height to prevent overflow
-            decoration: BoxDecoration(
-              color: color,
-              border: Border.all(color: Colors.black, width: 2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              text,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+          onTap: isEnabled ? onPressed : null, // Disable tap if not enabled
+          child: Opacity(
+            opacity: isEnabled ? 1.0 : 0.5, // Lower opacity if disabled
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              height: fixedHeight ? 45 : 50, // Adjust if needed
+              decoration: BoxDecoration(
+                color: color,
+                border: Border.all(color: Colors.black, width: 2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),

@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../routes.dart';
 import '/services/firestore_service.dart';
 
@@ -39,13 +39,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       try {
         // Step 1: Check if the username already exists
-        bool usernameExists =
-            await _firestoreService.checkUsernameExists(username);
+        bool usernameExists = await _firestoreService.checkUsernameExists(username);
         if (usernameExists) {
           setState(() {
             isLoading = false;
-            errorMessage =
-                'The username is already taken. Please choose another one.';
+            errorMessage = 'The username is already taken. Please choose another one.';
           });
           return;
         }
@@ -64,10 +62,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
         // Step 3: Update display name and send email verification
         await user.updateDisplayName(username);
-        await user.reload(); // Reload the user to ensure displayName is updated
+        await user.reload();
         await user.sendEmailVerification();
 
-        // Step 4: Use a batch write for Firestore operations
+        // Step 4: Reserve the username using a batch write
         WriteBatch batch = FirebaseFirestore.instance.batch();
 
         // Reserve the username
@@ -75,31 +73,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             FirebaseFirestore.instance.collection('usernames').doc(username);
         batch.set(usernameRef, {'uid': user.uid});
 
-        // Add user details
-        DocumentReference userRef =
-            FirebaseFirestore.instance.collection('users').doc(user.uid);
-        batch.set(userRef, {
-          'username': username,
-          'email': email,
-          'country': country,
-          'createdAt': FieldValue.serverTimestamp(),
-          // Add other user details as needed
-        });
-
-        // Commit the batch
+        // Commit the batch to reserve the username
         await batch.commit();
 
-        // Step 5: Navigate to the email verification screen
+        // Step 5: Add user details using FirestoreService's addUser method
+        // This will create the main user document and the public profile document
+        await _firestoreService.addUser(user.uid, username, email, country);
+
         setState(() {
           isLoading = false;
         });
+
+        // Step 6: Navigate to the email verification screen
         Navigator.pushReplacementNamed(context, emailVerificationRoute);
       } on FirebaseAuthException catch (e) {
         setState(() {
           isLoading = false;
           if (e.code == 'email-already-in-use') {
-            errorMessage =
-                'The email address is already in use by another account.';
+            errorMessage = 'The email address is already in use by another account.';
           } else if (e.code == 'weak-password') {
             errorMessage = 'The password provided is too weak.';
           } else if (e.code == 'invalid-email') {
@@ -108,16 +99,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             errorMessage = e.message ?? 'Registration failed. Please try again.';
           }
         });
-          } catch (e, stackTrace) {
-            setState(() {
-              isLoading = false;
-              errorMessage = 'An unexpected error occurred. Please try again later.';
-            });
-            // Log the exception
-            print('Registration error: $e');
-            print('Stack trace: $stackTrace');
-          }
- finally {
+      } catch (e, stackTrace) {
+        setState(() {
+          isLoading = false;
+          errorMessage = 'An unexpected error occurred. Please try again later.';
+        });
+        print('Registration error: $e');
+        print('Stack trace: $stackTrace');
+      } finally {
         // If an error occurred and a user was created, delete the user
         if (errorMessage.isNotEmpty && user != null) {
           try {
@@ -181,10 +170,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Make UI responsive by using MediaQuery
     double screenWidth = MediaQuery.of(context).size.width;
-    double formWidth = screenWidth * 0.85; // 85% of screen width
-    formWidth = formWidth > 350 ? 350 : formWidth; // Max width of 350
+    double formWidth = screenWidth * 0.85; 
+    formWidth = formWidth > 350 ? 350 : formWidth; 
 
     return Scaffold(
       body: Stack(
@@ -202,7 +190,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 children: [
                   Image.asset(
                     'assets/dissonantlogotext.png', // Path to your Dissonant logo
-                    height: 80, // Adjust height as needed
+                    height: 80,
                   ),
                   SizedBox(height: 16.0),
                   isLoading
@@ -218,8 +206,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 children: [
                                   if (errorMessage.isNotEmpty)
                                     Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 8.0),
+                                      padding: const EdgeInsets.only(bottom: 8.0),
                                       child: Text(
                                         errorMessage,
                                         style: TextStyle(color: Colors.red),
@@ -278,17 +265,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   DropdownButtonFormField<String>(
                                     decoration: InputDecoration(
                                       labelText: 'Country of Residence',
-                                      labelStyle:
-                                          TextStyle(color: Colors.black),
+                                      labelStyle: TextStyle(color: Colors.black),
                                       fillColor: Colors.white,
                                       filled: true,
                                       enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                            color: Colors.black, width: 2),
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                            color: Colors.black, width: 2),
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
                                     ),
                                     dropdownColor: Colors.white,
@@ -301,7 +285,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                           style: TextStyle(color: Colors.black),
                                         ),
                                       ),
-                                      // Add more countries as needed
                                     ],
                                     onChanged: (String? newValue) {
                                       setState(() {
@@ -313,8 +296,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   SizedBox(height: 8.0),
                                   Text(
                                     'We currently only support users in the United States.',
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.grey),
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
                                   ),
                                   SizedBox(height: 16.0),
                                   CustomRetroButton(
@@ -322,8 +304,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     onPressed: isLoading ? null : _register,
                                     color: Color(0xFFD24407),
                                     fixedHeight: true,
-                                    shadowColor:
-                                        Colors.black.withOpacity(0.9),
+                                    shadowColor: Colors.black.withOpacity(0.9),
                                   ),
                                 ],
                               ),
@@ -340,7 +321,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 }
 
-// Below are your custom widgets. Ensure they are implemented as per your design.
+// Below are your custom widgets (CustomFormContainer, CustomTextField, CustomRetroButton, etc.)
+// Ensure these are implemented as per your design, as previously shared in your original code.
 
 class CustomScrollViewWithKeyboardPadding extends StatelessWidget {
   final Widget child;
@@ -374,11 +356,9 @@ class CustomWindowFrame extends StatelessWidget {
       width: double.infinity,
       height: 40,
       decoration: BoxDecoration(
-        color: Color(0xFFFFA12C), // Updated color for the top bar
+        color: Color(0xFFFFA12C),
         border: Border(
-          bottom: BorderSide(
-              color: Colors.black,
-              width: 2), // Only bottom border for the orange bar
+          bottom: BorderSide(color: Colors.black, width: 2),
         ),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(4),
@@ -392,14 +372,12 @@ class CustomWindowFrame extends StatelessWidget {
             top: 8.0,
             child: GestureDetector(
               onTap: () {
-                Navigator.pop(context); // Pop the current page off the stack
+                Navigator.pop(context);
               },
               child: Container(
                 decoration: BoxDecoration(
-                  border:
-                      Border.all(color: Colors.black, width: 2), // Black border
-                  color: Color(
-                      0xFFF4F4F4), // Off-white color matching the design
+                  border: Border.all(color: Colors.black, width: 2),
+                  color: Color(0xFFF4F4F4),
                 ),
                 width: 20,
                 height: 20,
@@ -410,7 +388,7 @@ class CustomWindowFrame extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                     height: 1,
-                    color: Colors.black, // Black "X"
+                    color: Colors.black,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -463,25 +441,23 @@ class CustomFormContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      padding:
-          EdgeInsets.only(bottom: 12.0), // Adjusted padding to remove extra space
+      padding: EdgeInsets.only(bottom: 12.0),
       decoration: BoxDecoration(
         color: Color(0xFFF4F4F4),
-        border: Border.all(
-            color: Colors.black, width: 2), // Uniform thin black outline
+        border: Border.all(color: Colors.black, width: 2),
         borderRadius: BorderRadius.circular(4),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.8), // Darker shadow
+            color: Colors.black.withOpacity(0.8),
             offset: Offset(4, 4),
             blurRadius: 0,
           ),
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Only take necessary vertical space
+        mainAxisSize: MainAxisSize.min,
         children: [
-          CustomWindowFrame(), // Including window frame with the correct border
+          CustomWindowFrame(),
           child,
         ],
       ),
@@ -502,26 +478,22 @@ class CustomTextField extends StatelessWidget {
     this.obscureText = false,
     this.onChanged,
     this.textColor = Colors.black,
-    this.isFlat = false, // Flatter input field
+    this.isFlat = false,
     this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin:
-          const EdgeInsets.only(bottom: 8.0), // Space between label and input
+      margin: const EdgeInsets.only(bottom: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             labelText,
-            style: TextStyle(
-              fontSize: 16,
-              color: textColor,
-            ),
+            style: TextStyle(fontSize: 16, color: textColor),
           ),
-          SizedBox(height: 4.0), // Space between label and input
+          SizedBox(height: 4.0),
           Container(
             decoration: BoxDecoration(
               color: Color(0xFFF5F5F5),
@@ -529,7 +501,7 @@ class CustomTextField extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.8), // Darker shadow
+                  color: Colors.black.withOpacity(0.8),
                   offset: Offset(3, 3),
                   blurRadius: 0,
                 ),
@@ -542,12 +514,13 @@ class CustomTextField extends StatelessWidget {
                 fillColor: Colors.transparent,
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: isFlat ? 12 : 18), // Flatter input field
+                  horizontal: 12,
+                  vertical: isFlat ? 12 : 18,
+                ),
               ),
               onChanged: onChanged,
               style: TextStyle(color: textColor),
-              validator: validator, // Added validator
+              validator: validator,
             ),
           ),
         ],
@@ -558,40 +531,39 @@ class CustomTextField extends StatelessWidget {
 
 class CustomRetroButton extends StatelessWidget {
   final String text;
-  final VoidCallback? onPressed; // Made nullable to handle disabled state
+  final VoidCallback? onPressed;
   final Color color;
   final bool fixedHeight;
-  final Color shadowColor; // Custom shadow color
+  final Color shadowColor;
 
   const CustomRetroButton({
     Key? key,
     required this.text,
-    this.onPressed, // No longer required
-    this.color = const Color(0xFFD24407), // Updated color for the button
-    this.fixedHeight = false, // Allow control over height adjustment
-    this.shadowColor = Colors.black, // Default shadow color
+    this.onPressed,
+    this.color = const Color(0xFFD24407),
+    this.fixedHeight = false,
+    this.shadowColor = Colors.black,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Determine if the button is enabled based on the presence of onPressed
     final bool isEnabled = onPressed != null;
 
     return GestureDetector(
       onTap: isEnabled ? onPressed : null,
       child: Opacity(
-        opacity: isEnabled ? 1.0 : 0.5, // Reduce opacity if disabled
+        opacity: isEnabled ? 1.0 : 0.5,
         child: Container(
           width: double.infinity,
-          height: fixedHeight ? 45 : 50, // Adjust height to prevent overflow
+          height: fixedHeight ? 45 : 50,
           decoration: BoxDecoration(
             color: color,
             border: Border.all(color: Colors.black, width: 2),
             borderRadius: BorderRadius.circular(4),
             boxShadow: [
               BoxShadow(
-                color: shadowColor.withOpacity(0.9), // Darker shadow color
-                offset: Offset(4, 4), // Slightly larger offset
+                color: shadowColor.withOpacity(0.9),
+                offset: Offset(4, 4),
                 blurRadius: 0,
               ),
             ],

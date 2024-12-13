@@ -105,7 +105,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               ),
             ),
             _buildPageIndicator(),
-            SizedBox(height: 20),
+            SizedBox(height: 50),
           ],
         ),
       ),

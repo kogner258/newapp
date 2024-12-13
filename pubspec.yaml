@@ -47,8 +47,10 @@ dependencies:
  # cupertino_icons: ^1.0.6
   flutter_launcher_icons: ^0.14.1
   flutter_native_splash: ^2.2.18  # Replace with the latest version
-  cached_network_image: ^3.2.1
+  cached_network_image: ^3.2.3
   firebase_crashlytics: ^4.1.4
+  path: ^1.8.3
+
 
 
 

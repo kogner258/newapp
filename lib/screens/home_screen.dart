@@ -1,13 +1,12 @@
-// lib/screens/home_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:dissonantapp2/widgets/grainy_background_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_service.dart';
 import '../widgets/retro_button_widget.dart';
-import '../widgets/bottom_navigation_widget.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // Import the package
+import '../models/album.dart';
+import '../models/feed_item.dart';
+import 'album_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -16,14 +15,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  List<Map<String, dynamic>> _feedItems = [];
+  List<FeedItem> _feedItems = [];
   bool _isLoading = true;
 
   PageController _pageController = PageController();
   int _currentIndex = 0;
 
-  final double spineHeight = 45.0; // Adjusted spine height
-  final int maxSpines = 3; // Maximum number of spines to display
+  final double spineHeight = 45.0;
+  final int maxSpines = 3;
 
   @override
   void initState() {
@@ -33,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onPageChanged() {
-    if (!mounted) return; // Added check
+    if (!mounted) return;
     int newIndex = _pageController.page!.round();
     if (newIndex != _currentIndex && newIndex < _feedItems.length) {
       setState(() {
@@ -42,79 +41,106 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _fetchFeedItems() async {
-    QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
-        .collection('orders')
-        .where('status', whereIn: ['kept', 'returnedConfirmed'])
-        .orderBy('timestamp', descending: true)
-        .get();
-
-    List<Map<String, dynamic>> feedItems = [];
-
-    for (var doc in ordersSnapshot.docs) {
-      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-      // Fetch user information from the public subcollection
-      DocumentSnapshot publicProfileDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(data['userId'])
-          .collection('public')
-          .doc('profile')
-          .get();
-
-      String username = 'Unknown User';
-
-      if (publicProfileDoc.exists) {
-        Map<String, dynamic>? publicData =
-            publicProfileDoc.data() as Map<String, dynamic>?;
-        if (publicData != null) {
-          username = publicData['username'] ?? 'Unknown User';
-        }
-      } else {
-        print('Public profile does not exist for user ID: ${data['userId']}');
-      }
-
-      // Fetch album information
-      String? albumId = data['details']?['albumId'];
-      if (albumId == null || albumId.isEmpty) {
-        print('No albumId found in order document with ID: ${doc.id}');
-        continue; // Skip this feed item or handle as needed
-      }
-
-      DocumentSnapshot albumDoc = await FirebaseFirestore.instance
-          .collection('albums')
-          .doc(albumId)
-          .get();
-
-      String albumName = 'Unknown Album';
-      String albumImageUrl = '';
-
-      if (albumDoc.exists) {
-        Map<String, dynamic>? albumData =
-            albumDoc.data() as Map<String, dynamic>?;
-        if (albumData != null) {
-          albumName = albumData['albumName'] ?? 'Unknown Album';
-          albumImageUrl = albumData['coverUrl'] ?? '';
-        }
-      } else {
-        print('Album document does not exist for ID: $albumId');
-      }
-
-      feedItems.add({
-        'username': username,
-        'status': data['status'],
-        'albumName': albumName,
-        'albumImageUrl': albumImageUrl,
-        'albumId': albumId,
-        'userId': data['userId'],
-      });
+  bool isSupportedImageFormat(String imageUrl) {
+    try {
+      Uri uri = Uri.parse(imageUrl);
+      String path = uri.path.toLowerCase();
+      String extension = path.split('.').last;
+      return (extension == 'jpg' || extension == 'jpeg' || extension == 'png');
+    } catch (e) {
+      print('Error parsing image URL: $imageUrl, error: $e');
+      return false;
     }
+  }
 
-    if (!mounted) return; // Added check
-    setState(() {
-      _feedItems = feedItems;
-      _isLoading = false;
-    });
+  Future<void> _fetchFeedItems() async {
+    try {
+      QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('status', whereIn: ['kept', 'returnedConfirmed'])
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      List<FeedItem> feedItems = [];
+
+      for (var doc in ordersSnapshot.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // Fetch user information
+        DocumentSnapshot publicProfileDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(data['userId'])
+            .collection('public')
+            .doc('profile')
+            .get();
+
+        String username = 'Unknown User';
+        if (publicProfileDoc.exists) {
+          Map<String, dynamic>? publicData =
+              publicProfileDoc.data() as Map<String, dynamic>?;
+          if (publicData != null) {
+            username = publicData['username'] ?? 'Unknown User';
+          }
+        }
+
+        // Fetch album information
+        String? albumId = data['details']?['albumId'];
+        if (albumId == null || albumId.isEmpty) continue;
+
+        DocumentSnapshot albumDoc = await FirebaseFirestore.instance
+            .collection('albums')
+            .doc(albumId)
+            .get();
+
+        if (albumDoc.exists) {
+          Album album = Album.fromDocument(albumDoc);
+
+          // Log the album image URL
+          print('Loading image URL: ${album.albumImageUrl}');
+
+          // Validate URL format
+          if (!isSupportedImageFormat(album.albumImageUrl)) {
+            print('Unsupported image format for album ${album.albumName}: ${album.albumImageUrl}');
+            continue; // Skip this album or handle accordingly
+          }
+
+          FeedItem feedItem = FeedItem(
+            username: username,
+            status: data['status'],
+            album: album,
+          );
+
+          feedItems.add(feedItem);
+        } else {
+          print('Album with ID $albumId does not exist.');
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _feedItems = feedItems;
+          _isLoading = false;
+        });
+
+        // Prefetch the first image
+        if (_feedItems.isNotEmpty) {
+          precacheImage(NetworkImage(_feedItems[0].album.albumImageUrl), context)
+              .catchError((error) {
+            print('Error precaching first image: $error');
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching feed items: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading feed items: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _addToWishlist(
@@ -142,61 +168,135 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Calculate total height for spines dynamically based on screen height
-    final double totalSpinesHeight = MediaQuery.of(context).size.height *
-        0.15; // Adjust percentage as needed
+  Widget _buildFeedItem(FeedItem item) {
+    String actionText = item.status == 'kept' ? 'kept' : 'returned';
 
-    return Scaffold(
-      body: BackgroundWidget(
-        child: _isLoading
-            ? Center(child: CircularProgressIndicator())
-            : SafeArea(
-                // Ensures content fits within safe areas on the screen
-                child: Stack(
-                  children: [
-                    // Spines at the bottom, behind the main content
-                    _buildSpines(totalSpinesHeight),
-
-                    // Main content with dynamic bottom padding
-                    Padding(
-                      padding: EdgeInsets.only(bottom: totalSpinesHeight),
-                      child: PageView.builder(
-                        controller: _pageController,
-                        scrollDirection: Axis.vertical,
-                        itemCount: _feedItems.length,
-                        itemBuilder: (context, index) {
-                          final item = _feedItems[index];
-                          return _buildAnimatedFeedItem(item, index);
-                        },
-                      ),
-                    ),
-
-                    // Title text at the top
-                    Positioned(
-                      top: 5.0,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Text(
-                          'My Feed',
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: EdgeInsets.only(top: 40.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // User action text
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0),
+              child: Row(
+                children: [
+                  // Username and action
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${item.username}',
                           style: TextStyle(
-                            fontSize: 12.0,
+                            fontSize: 18.0,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
+                          textAlign: TextAlign.left,
                         ),
+                        SizedBox(height: 4.0),
+                        Text(
+                          actionText,
+                          style: TextStyle(
+                            fontSize: 16.0,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.left,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 10.0),
+                  // Album name
+                  Expanded(
+                    flex: 1,
+                    child: Text(
+                      '${item.album.albumName}',
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16.0),
+            // Album image with navigation
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.35,
+              child: InkWell(
+                onTap: () {
+                  // Navigate to AlbumDetailsScreen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AlbumDetailsScreen(
+                        album: item.album,
                       ),
                     ),
-                  ],
-                ),
+                  );
+                },
+                child: (item.album.albumImageUrl != null &&
+                        item.album.albumImageUrl.isNotEmpty &&
+                        isSupportedImageFormat(item.album.albumImageUrl))
+                    ? Image.network(
+                        item.album.albumImageUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return Center(child: CircularProgressIndicator());
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          print('Error loading image from ${item.album.albumImageUrl}: $error');
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error, size: 100, color: Colors.red),
+                              SizedBox(height: 8),
+                              Text(
+                                'Failed to load image.',
+                                style: TextStyle(color: Colors.red),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          );
+                        },
+                      )
+                    : Icon(
+                        Icons.album,
+                        size: 120,
+                      ),
               ),
+            ),
+            SizedBox(height: 30.0),
+            // Add to Wishlist button
+            RetroButton(
+              text: 'Add to Wishlist',
+              onPressed: () {
+                _addToWishlist(
+                  item.album.albumId,
+                  item.album.albumName,
+                  item.album.albumImageUrl,
+                );
+              },
+              color: Colors.white,
+              fixedHeight: true,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildAnimatedFeedItem(Map<String, dynamic> item, int index) {
+  Widget _buildAnimatedFeedItem(FeedItem item, int index) {
     return AnimatedBuilder(
       animation: _pageController,
       builder: (context, child) {
@@ -213,108 +313,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _buildFeedItem(item),
         );
       },
-    );
-  }
-
-  Widget _buildFeedItem(Map<String, dynamic> item) {
-  String actionText = item['status'] == 'kept' ? 'kept' : 'returned';
-
-  return Align(
-    alignment: Alignment.topCenter,
-    child: Padding(
-      padding: EdgeInsets.only(
-          top: 40.0), // Adjust this value to slide content down
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // User action text
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0),
-            child: Row(
-              children: [
-                // Username and action
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${item['username']}',
-                        style: TextStyle(
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.left,
-                      ),
-                      SizedBox(height: 4.0), // Optional spacing between lines
-                      Text(
-                        actionText,
-                        style: TextStyle(
-                          fontSize: 16.0, // Slightly smaller font size
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.left,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 10.0), // Space between texts
-
-                // Album name
-                Expanded(
-                  flex: 1,
-                  child: Text(
-                    '${item['albumName']}',
-                    style: TextStyle(
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 16.0),
-
-            // Album image with spinner while loading
-            SizedBox(
-              height: MediaQuery.of(context).size.height * 0.35,
-              child: item['albumImageUrl'] != ''
-                  ? CachedNetworkImage(
-                      imageUrl: item['albumImageUrl'],
-                      fit: BoxFit.contain,
-                      placeholder: (context, url) =>
-                          Center(child: CircularProgressIndicator()),
-                      errorWidget: (context, url, error) =>
-                          Icon(Icons.error, size: 100),
-                    )
-                  : Icon(
-                      Icons.album,
-                      size: 120,
-                    ),
-            ),
-            SizedBox(height: 30.0),
-
-            // Add to Wishlist button
-            RetroButton(
-              text: 'Add to Wishlist',
-              onPressed: () {
-                _addToWishlist(
-                  item['albumId'],
-                  item['albumName'],
-                  item['albumImageUrl'],
-                );
-              },
-              color: Colors.white,
-              fixedHeight: true,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -336,19 +334,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     : _currentIndex.toDouble();
 
             for (int i = 0; i < maxSpines; i++) {
-              int spineIndex = _currentIndex + i + 1; // Corrected index
+              int spineIndex = _currentIndex + i + 1;
               if (spineIndex < _feedItems.length) {
                 double offsetFromCurrent = page - _currentIndex;
-
-                // Adjust bottom offset to stack spines properly
                 double bottomOffset = (maxSpines - i - 1) * spineHeight +
                     offsetFromCurrent * spineHeight;
-
-                // Adjust scaling and opacity to make spines smaller and more faded as they go down
                 double scale =
                     (1.0 - i * 0.05 - offsetFromCurrent * 0.02).clamp(0.0, 1.0);
                 double opacity = (1.0 - i * 0.3 - offsetFromCurrent * 0.1)
-                    .clamp(0.0, 1.0); // Updated
+                    .clamp(0.0, 1.0);
 
                 Widget spine = Positioned(
                   bottom: bottomOffset,
@@ -378,9 +372,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSpine(Map<String, dynamic> item) {
-    // Shorten album name if over 26 characters
-    String albumName = item['albumName'];
+  Widget _buildSpine(FeedItem item) {
+    String albumName = item.album.albumName;
     if (albumName.length > 26) {
       albumName = albumName.substring(0, 23) + '...';
     }
@@ -396,12 +389,12 @@ class _HomeScreenState extends State<HomeScreen> {
               'assets/spineasset.png',
             ),
           ),
-          // Album name on the white label
+          // Album name on the spine
           Positioned(
-            left: 60, // Your custom position
+            left: 60,
             top: 0,
             bottom: 0,
-            right: 10, // Ensure text doesn't overflow
+            right: 10,
             child: Container(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -416,6 +409,52 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double totalSpinesHeight = MediaQuery.of(context).size.height * 0.15;
+
+    return Scaffold(
+      body: BackgroundWidget(
+        child: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : SafeArea(
+                child: Stack(
+                  children: [
+                    _buildSpines(totalSpinesHeight),
+                    Padding(
+                      padding: EdgeInsets.only(bottom: totalSpinesHeight),
+                      child: PageView.builder(
+                        controller: _pageController,
+                        scrollDirection: Axis.vertical,
+                        itemCount: _feedItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _feedItems[index];
+                          return _buildAnimatedFeedItem(item, index);
+                        },
+                      ),
+                    ),
+                    Positioned(
+                      top: 5.0,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Text(
+                          'My Feed',
+                          style: TextStyle(
+                            fontSize: 12.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }
