@@ -166,64 +166,108 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
     }
   }
 
-  Future<void> _showReviewDialog({String initialComment = ''}) async {
-    final newComment = await showDialog<String>(
-      context: context,
-      builder: (context) => ReviewDialog(initialComment: initialComment),
-    );
+Future<void> _showReviewDialog({String initialComment = ''}) async {
+  // If user is not logged in or userId is null, just return.
+  if (_currentUserId == null) return;
 
-    if (newComment != null) {
-      if (_currentUserId == null) return;
-      if (_hasUserReview && _userReviewDocId != null) {
-        // Update review
-        try {
-          await _firestoreService.updateReview(
-            albumId: widget.album.albumId,
-            reviewId: _userReviewDocId!,
-            comment: newComment.trim(),
-          );
+  // Decide whether to show the "Delete" button (if the user already has a review).
+  bool showDelete = _hasUserReview && _userReviewDocId != null;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Review updated successfully!')),
-          );
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating review: $e')),
-          );
-        }
-      } else {
-        // Add new review
-        try {
-          final orders = await FirebaseFirestore.instance
-              .collection('orders')
-              .where('userId', isEqualTo: _currentUserId)
-              .where('details.albumId', isEqualTo: widget.album.albumId)
-              .limit(1)
-              .get();
+  final dialogResult = await showDialog<String>(
+    context: context,
+    builder: (context) => ReviewDialog(
+      initialComment: initialComment,
+      showDeleteButton: showDelete,
+    ),
+  );
 
-          String orderId = orders.docs.isNotEmpty ? orders.docs.first.id : 'no_order';
+  // If the user canceled or closed the dialog, dialogResult will be null.
+  if (dialogResult == null) {
+    return;
+  }
 
-          await _firestoreService.addReview(
-            albumId: widget.album.albumId,
-            userId: _currentUserId!,
-            orderId: orderId,
-            comment: newComment.trim(),
-          );
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Review submitted successfully!')),
-          );
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error submitting review: $e')),
-          );
-        }
+  // Check if the user tapped "Delete"
+  if (dialogResult == '__DELETE_REVIEW__') {
+    // Safeguard: Only delete if we actually have a review
+    if (_hasUserReview && _userReviewDocId != null) {
+      try {
+        await _firestoreService.deleteReview(
+          albumId: widget.album.albumId,
+          reviewId: _userReviewDocId!,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Review deleted successfully!')),
+        );
+        // Update local state
+        await _checkUserReview();
+        setState(() {});
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting review: $e')),
+        );
       }
+    }
+    return; // End here because we processed a deletion
+  }
 
-      await _checkUserReview();
-      setState(() {}); // Rebuild to reflect changes
+  // Otherwise, we have a new or updated comment from the user
+  final newComment = dialogResult.trim();
+  if (newComment.isEmpty) {
+    // Extra safeguard (the dialog already blocks empty reviews, but just in case)
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Review cannot be blank.')),
+    );
+    return;
+  }
+
+  // If the user already has a review, update it. Otherwise, create a new one.
+  if (_hasUserReview && _userReviewDocId != null) {
+    try {
+      await _firestoreService.updateReview(
+        albumId: widget.album.albumId,
+        reviewId: _userReviewDocId!,
+        comment: newComment,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Review updated successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating review: $e')),
+      );
+    }
+  } else {
+    try {
+      // Optionally find an order to link. If you track whether the user has received this album, you can do so here.
+      final orders = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('userId', isEqualTo: _currentUserId)
+          .where('details.albumId', isEqualTo: widget.album.albumId)
+          .limit(1)
+          .get();
+
+      String orderId = orders.docs.isNotEmpty ? orders.docs.first.id : 'no_order';
+
+      await _firestoreService.addReview(
+        albumId: widget.album.albumId,
+        userId: _currentUserId!,
+        orderId: orderId,
+        comment: newComment,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Review submitted successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error submitting review: $e')),
+      );
     }
   }
+
+  // Refresh local state and rebuild UI
+  await _checkUserReview();
+  setState(() {});
+}
 
   Widget _buildGenresSection() {
     if (_isLoadingGenres) {

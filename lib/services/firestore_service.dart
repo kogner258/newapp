@@ -1,9 +1,16 @@
 // lib/services/firestore_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  /// ------------------------
+  /// Existing Methods
+  /// ------------------------
 
   // Check if a username exists in the usernames collection
   Future<bool> checkUsernameExists(String username) async {
@@ -256,28 +263,41 @@ class FirestoreService {
         .get();
     return doc.exists ? doc['genre'] as String? : null;
   }
+
   /// Updates the taste profile of a user.
   Future<void> updateTasteProfile(String userId, Map<String, dynamic> tasteProfileData) async {
     try {
       await _firestore.collection('users').doc(userId).update({
         'tasteProfile': tasteProfileData,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       throw Exception('Failed to update taste profile: $e');
     }
   }
+
   // Add user to the users collection and create public profile
   Future<void> addUser(
-      String userId, String username, String email, String country) async {
+    String userId,
+    String username,
+    String email,
+    String country,
+  ) async {
     // Create the main user document with private data
     await _firestore.collection('users').doc(userId).set({
+      'username': username, // <-- Add this field
       'email': email,
       'country': country,
       'addresses': [],
       'hasOrdered': false,
       'tasteProfile': null,
+      'customizations': {
+        'themeColor': '#C0C0C0',
+        'fontStyle': 'MS Sans Serif',
+        'layout': 'default',
+      },
       'createdAt': FieldValue.serverTimestamp(),
-      // Add other private user-related fields as needed
+      'updatedAt': FieldValue.serverTimestamp(),
     });
 
     // Create the public profile in the 'public' subcollection
@@ -291,6 +311,7 @@ class FirestoreService {
       // Add other public fields if necessary
     });
   }
+
 
   Future<void> updateOrderReturnStatus(
       String orderId, bool returnConfirmed) async {
@@ -319,9 +340,11 @@ class FirestoreService {
     await _firestore.collection('orders').doc(orderId).update({
       'status': 'sent',
       'albumId': albumId,
-      'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
+      'details.albumId': albumId, // <--- Add this line
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
+
 
   Future<void> updateOrderStatus(String orderId, String status) async {
     await _firestore.collection('orders').doc(orderId).update({
@@ -464,4 +487,312 @@ class FirestoreService {
   Future<DocumentSnapshot> getUserStats(String userId) async {
     return await _firestore.collection('users').doc(userId).get();
   }
+
+  /// ------------------------
+  /// New Methods for Followers/Following System
+  /// ------------------------
+
+  /// Follows a user.
+  Future<void> followUser(String currentUserId, String targetUserId) async {
+    try {
+      if (currentUserId == targetUserId) {
+        throw Exception("You cannot follow yourself.");
+      }
+
+      // Create a batch to ensure atomicity
+      WriteBatch batch = _firestore.batch();
+
+      // Reference paths
+      DocumentReference followingRef = _firestore
+          .collection('following')
+          .doc(currentUserId)
+          .collection('userFollowing')
+          .doc(targetUserId);
+
+      DocumentReference followersRef = _firestore
+          .collection('followers')
+          .doc(targetUserId)
+          .collection('userFollowers')
+          .doc(currentUserId);
+
+      DocumentReference currentUserDoc = _firestore.collection('users').doc(currentUserId);
+      DocumentReference targetUserDoc = _firestore.collection('users').doc(targetUserId);
+
+      // Check if already following
+      DocumentSnapshot followingSnap = await followingRef.get();
+      if (followingSnap.exists) {
+        throw Exception("You are already following this user.");
+      }
+
+      // Set following document
+      batch.set(followingRef, {
+        'followedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Set followers document
+      batch.set(followersRef, {
+        'followedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Increment followingCount and followersCount
+      batch.update(currentUserDoc, {
+        'followingCount': FieldValue.increment(1),
+      });
+
+      batch.update(targetUserDoc, {
+        'followersCount': FieldValue.increment(1),
+      });
+
+      // Commit the batch
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to follow user: $e');
+    }
+  }
+
+  /// Unfollows a user.
+  Future<void> unfollowUser(String currentUserId, String targetUserId) async {
+    try {
+      // Create a batch to ensure atomicity
+      WriteBatch batch = _firestore.batch();
+
+      // Reference paths
+      DocumentReference followingRef = _firestore
+          .collection('following')
+          .doc(currentUserId)
+          .collection('userFollowing')
+          .doc(targetUserId);
+
+      DocumentReference followersRef = _firestore
+          .collection('followers')
+          .doc(targetUserId)
+          .collection('userFollowers')
+          .doc(currentUserId);
+
+      DocumentReference currentUserDoc = _firestore.collection('users').doc(currentUserId);
+      DocumentReference targetUserDoc = _firestore.collection('users').doc(targetUserId);
+
+      // Check if not following
+      DocumentSnapshot followingSnap = await followingRef.get();
+      if (!followingSnap.exists) {
+        throw Exception("You are not following this user.");
+      }
+
+      // Delete following document
+      batch.delete(followingRef);
+
+      // Delete followers document
+      batch.delete(followersRef);
+
+      // Decrement followingCount and followersCount
+      batch.update(currentUserDoc, {
+        'followingCount': FieldValue.increment(-1),
+      });
+
+      batch.update(targetUserDoc, {
+        'followersCount': FieldValue.increment(-1),
+      });
+
+      // Commit the batch
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to unfollow user: $e');
+    }
+  }
+
+  /// Retrieves a list of follower IDs for a user.
+  Future<List<String>> getFollowers(String userId) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('followers')
+          .doc(userId)
+          .collection('userFollowers')
+          .get();
+
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      throw Exception('Failed to retrieve followers: $e');
+    }
+  }
+
+  /// Retrieves a list of following IDs for a user.
+  Future<List<String>> getFollowing(String userId) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('following')
+          .doc(userId)
+          .collection('userFollowing')
+          .get();
+
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      throw Exception('Failed to retrieve following: $e');
+    }
+  }
+
+  /// Retrieves whether the current user is following the target user.
+  Future<bool> isFollowing(String currentUserId, String targetUserId) async {
+    try {
+      DocumentSnapshot doc = await _firestore
+          .collection('following')
+          .doc(currentUserId)
+          .collection('userFollowing')
+          .doc(targetUserId)
+          .get();
+
+      return doc.exists;
+    } catch (e) {
+      throw Exception('Failed to check follow status: $e');
+    }
+  }
+
+  /// ------------------------
+  /// New Methods for Profile Customizations
+  /// ------------------------
+
+  /// Updates the customization settings of a user.
+  Future<void> updateUserCustomizations(String userId, Map<String, dynamic> customizationData) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'customizations': customizationData,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw Exception('Failed to update user customizations: $e');
+    }
+  }
+
+  /// Retrieves the customization settings of a user.
+  Future<Map<String, dynamic>?> getUserCustomizations(String userId) async {
+    try {
+      // Cast the DocumentSnapshot to include the expected data type
+      DocumentSnapshot<Map<String, dynamic>> userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        // Access the 'customizations' field safely
+        return userDoc.data()?['customizations'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to retrieve user customizations: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    try {
+      // Fetch the main user document
+      DocumentSnapshot<Map<String, dynamic>> userDoc =
+          await _firestore.collection('users').doc(userId).get();
+
+      if (!userDoc.exists) {
+        return null;
+      }
+
+      Map<String, dynamic>? userData = userDoc.data();
+      if (userData == null) {
+        return null;
+      }
+
+      // Fetch the public profile
+      DocumentSnapshot<Map<String, dynamic>> publicProfileDoc =
+          await _firestore.collection('users').doc(userId).collection('public').doc('profile').get();
+
+      if (publicProfileDoc.exists && publicProfileDoc.data() != null) {
+        userData.addAll(publicProfileDoc.data()!);
+      }
+
+      return userData;
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      return null;
+    }
+  }
+
+  /// ------------------------
+  /// Image Upload Methods
+  /// ------------------------
+
+  /// Uploads a profile picture and returns its URL.
+  Future<String> uploadProfilePicture(String userId, String filePath) async {
+    try {
+      File file = File(filePath);
+      Reference storageRef = _storage.ref().child('profile_pictures').child('$userId.png');
+      UploadTask uploadTask = storageRef.putFile(file);
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Failed to upload profile picture: $e');
+    }
+  }
+
+  /// Deletes a review from an album's "reviews" subcollection.
+  Future<void> deleteReview({
+    required String albumId,
+    required String reviewId,
+  }) async {
+    await _firestore
+        .collection('albums')
+        .doc(albumId)
+        .collection('reviews')
+        .doc(reviewId)
+        .delete();
+  }
+
+  /// Uploads a banner image and returns its URL.
+  Future<String> uploadBannerImage(String userId, String filePath) async {
+    try {
+      File file = File(filePath);
+      Reference storageRef = _storage.ref().child('banner_images').child('$userId.png');
+      UploadTask uploadTask = storageRef.putFile(file);
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Failed to upload banner image: $e');
+    }
+  }
+
+
+/// Updates the profile picture URL in the public profile.
+Future<void> updateUserPublicProfilePicture(
+    String userId, String profilePictureUrl) async {
+  try {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('public')
+        .doc('profile')
+        .update({
+      'profilePictureUrl': profilePictureUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    throw Exception('Failed to update profile picture: $e');
+  }
+}
+
+/// Updates the banner image URL in the public profile.
+Future<void> updateUserBannerPicture(
+    String userId, String bannerUrl) async {
+  try {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('public')
+        .doc('profile')
+        .update({
+      'bannerUrl': bannerUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    throw Exception('Failed to update banner image: $e');
+  }
+}
+  /// ------------------------
+  /// Additional Existing Methods (Preserved)
+  /// ------------------------
+
+  // ... [All other existing methods remain unchanged]
+
+  /// Note: Ensure that all existing methods you provided are included above.
 }

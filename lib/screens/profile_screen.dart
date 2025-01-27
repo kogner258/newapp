@@ -1,3 +1,5 @@
+// lib/screens/profile_screen.dart
+
 import 'package:dissonantapp2/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +12,7 @@ import '../widgets/retro_button_widget.dart'; // Import the RetroButtonWidget
 import '../widgets/retro_form_container_widget.dart';
 import 'wishlist_screen.dart'; // Import the RetroFormContainerWidget
 import 'options_screen.dart'; // Import OptionsScreen
+import 'personal_profile_screen.dart'; // Import the PersonalProfileScreen
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -128,6 +131,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                   color: Color(0xFFFFA500),
                   fixedHeight: true,
+                ),
+                SizedBox(height: 20), // Add spacing between buttons
+                RetroButton(
+                  text: 'Personal Profile',
+                  onPressed: () {
+                    if (_user != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PersonalProfileScreen(userId: _user!.uid),
+                        ),
+                      );
+                    } else {
+                      // Optionally handle the case where _user is null
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'User not authenticated.',
+                            style: TextStyle(fontFamily: 'MS Sans Serif'),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  color: Color(0xFFD24407), // Choose a distinct color for differentiation
+                  fixedHeight: true,
+                  shadowColor: Colors.black,
                 ),
               ],
               Spacer(),
