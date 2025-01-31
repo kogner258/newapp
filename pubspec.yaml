@@ -37,7 +37,7 @@ dependencies:
   cloud_firestore: ^5.4.3
   provider: ^6.0.5
   shared_preferences: ^2.0.15
-  flutter_stripe: ^11.4.0 
+  flutter_stripe: ^11.2.0 
   carousel_slider: ^5.0.0 
   google_fonts: 6.2.1 
   image_picker: 1.1.2
@@ -105,6 +105,8 @@ flutter:
     - assets/profileicon.png
     - assets/emptycdcase.png
     - assets/spineasset.png
+    - assets/waitlistwelcome.png
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

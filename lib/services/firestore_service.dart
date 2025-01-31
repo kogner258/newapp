@@ -327,6 +327,7 @@ class FirestoreService {
       'address': address,
       'status': 'new',
       'timestamp': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(), 
       'details': {},
     });
 

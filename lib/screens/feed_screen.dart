@@ -40,16 +40,24 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Future<void> _fetchFeedItems() async {
+  try {
     QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
         .collection('orders')
         .where('status', whereIn: ['kept', 'returnConfirmed'])
-        .orderBy('timestamp', descending: true)
+        .orderBy('updatedAt', descending: true)
+        .limit(25) // Ensure only the latest 25 are fetched
         .get();
 
     List<Map<String, dynamic>> feedItems = [];
 
     for (var doc in ordersSnapshot.docs) {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+      Timestamp? updatedAt = data['updatedAt'] as Timestamp?;
+      if (updatedAt == null) {
+        print('Skipping order ${doc.id} due to missing updatedAt field');
+        continue; // Skip orders without updatedAt
+      }
 
       // Fetch user information
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
@@ -102,14 +110,26 @@ class _FeedScreenState extends State<FeedScreen> {
         'albumImageUrl': albumImageUrl,
         'albumId': albumId,
         'userId': data['userId'],
+        'updatedAt': updatedAt, // Keep track of updated time
       });
     }
+
+    // **Double-check sorting in case Firestore query fails**
+    feedItems.sort((a, b) => (b['updatedAt'] as Timestamp)
+        .compareTo(a['updatedAt'] as Timestamp));
 
     setState(() {
       _feedItems = feedItems;
       _isLoading = false;
     });
+  } catch (e) {
+    print('Error fetching feed items: $e');
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
+
 
   @override
   void dispose() {

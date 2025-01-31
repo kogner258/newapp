@@ -1,18 +1,16 @@
-// lib/screens/profile_screen.dart
-
 import 'package:dissonantapp2/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
 import 'admin_dashboard_screen.dart';
-import '../widgets/grainy_background_widget.dart'; // Import the BackgroundWidget
-import '../widgets/stats_bar_widget.dart'; // Import the StatsBar widget
-import '../widgets/retro_button_widget.dart'; // Import the RetroButtonWidget
+import '../widgets/grainy_background_widget.dart'; 
+import '../widgets/stats_bar_widget.dart'; 
+import '../widgets/retro_button_widget.dart'; 
 import '../widgets/retro_form_container_widget.dart';
-import 'wishlist_screen.dart'; // Import the RetroFormContainerWidget
-import 'options_screen.dart'; // Import OptionsScreen
-import 'personal_profile_screen.dart'; // Import the PersonalProfileScreen
+import 'wishlist_screen.dart'; 
+import 'options_screen.dart'; 
+import 'personal_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -26,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _albumsSentBack = 0;
   int _albumsKept = 0;
   bool _isLoading = true;
+  bool _isUpdatingOrders = false; // State for the update button
   String? _userName;
 
   @override
@@ -68,6 +67,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     }
   }
+
+  /// **Admin function to update orders with missing `updatedAt`**
+ Future<void> _updateOrdersWithTimestamps() async {
+  setState(() {
+    _isUpdatingOrders = true;
+  });
+
+  try {
+    final QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
+        .collection('orders')
+        .where('updatedAt', isEqualTo: null) // Check both missing & null values
+        .get();
+
+    if (ordersSnapshot.docs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No orders found without updatedAt!')),
+      );
+      setState(() {
+        _isUpdatingOrders = false;
+      });
+      return;
+    }
+
+    final WriteBatch batch = FirebaseFirestore.instance.batch();
+
+    for (final doc in ordersSnapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final Timestamp? existingTimestamp = data['timestamp'] as Timestamp?;
+
+      if (existingTimestamp != null) {
+        print('Updating order ${doc.id} with timestamp: $existingTimestamp');
+        batch.update(doc.reference, {'updatedAt': existingTimestamp});
+      } else {
+        print('Updating order ${doc.id} with serverTimestamp');
+        batch.update(doc.reference, {'updatedAt': FieldValue.serverTimestamp()});
+      }
+    }
+
+    await batch.commit();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Updated ${ordersSnapshot.docs.length} orders!')),
+    );
+  } catch (error) {
+    print('Error updating orders: $error');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error updating orders: $error')),
+    );
+  } finally {
+    setState(() {
+      _isUpdatingOrders = false;
+    });
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Color(0xFFFFA500),
                   fixedHeight: true,
                 ),
-                SizedBox(height: 20), // Add spacing between buttons
+                SizedBox(height: 20),
                 RetroButton(
                   text: 'Personal Profile',
                   onPressed: () {
@@ -144,20 +198,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       );
                     } else {
-                      // Optionally handle the case where _user is null
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'User not authenticated.',
-                            style: TextStyle(fontFamily: 'MS Sans Serif'),
-                          ),
-                        ),
+                        SnackBar(content: Text('User not authenticated.')),
                       );
                     }
                   },
-                  color: Color(0xFFD24407), // Choose a distinct color for differentiation
+                  color: Color(0xFFD24407),
                   fixedHeight: true,
                   shadowColor: Colors.black,
+                ),
+                SizedBox(height: 20),
+
+                /// **New Button to Update Orders**
+                RetroButton(
+                  text: _isUpdatingOrders ? 'Updating...' : 'Update Orders',
+                  onPressed: _isUpdatingOrders ? null : _updateOrdersWithTimestamps,
+                  color: Colors.blue,
+                  fixedHeight: true,
                 ),
               ],
               Spacer(),

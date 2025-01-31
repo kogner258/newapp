@@ -1,3 +1,4 @@
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -89,72 +90,76 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _processPayment() async {
-    setState(() {
-      _isProcessing = true;
-    });
+  setState(() {
+    _isProcessing = true;
+  });
 
-    try {
-      // Create PaymentIntent
-      final response = await http.post(
-        Uri.parse('https://86ej4qdp9i.execute-api.us-east-1.amazonaws.com/dev/create-payment-intent'),
-        body: jsonEncode({'amount': 899}),
-        headers: {'Content-Type': 'application/json'},
-      );
+  try {
+    // Create PaymentIntent
+    print('Creating PaymentIntent...');
+    final response = await http.post(
+      Uri.parse('https://86ej4qdp9i.execute-api.us-east-1.amazonaws.com/dev/create-payment-intent'),
+      body: jsonEncode({'amount': 899}), // Ensure this is in cents
+      headers: {'Content-Type': 'application/json'},
+    );
 
-      if (response.statusCode == 200) {
-        final paymentIntentData = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final paymentIntentData = jsonDecode(response.body);
 
-        await _paymentService.initPaymentSheet(paymentIntentData['clientSecret']);
-        await _paymentService.presentPaymentSheet();
-
-        // Payment success
-        await _firestoreService.updateOrderStatus(widget.orderId, 'kept');
-
-        // If user left a review
-        if (_review.trim().isNotEmpty && _albumId != null) {
-          await _submitReview(_review.trim());
-        }
-
-        setState(() {
-          _isProcessing = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment successful. Enjoy your new album!')),
-        );
-
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-      } else {
-        throw Exception('Failed to create PaymentIntent. Server error: ${response.body}');
+      if (!paymentIntentData.containsKey('clientSecret')) {
+        throw Exception('Invalid PaymentIntent response: ${response.body}');
       }
-    } on StripeException catch (e) {
+
+      print('Initializing payment sheet...');
+      await _paymentService.initPaymentSheet(paymentIntentData['clientSecret']);
+      print('Presenting payment sheet...');
+      await _paymentService.presentPaymentSheet();
+
+      // Payment success
+      print('Payment completed successfully.');
+      await _firestoreService.updateOrderStatus(widget.orderId, 'kept');
+
+      // If user left a review
+      if (_review.trim().isNotEmpty && _albumId != null) {
+        await _submitReview(_review.trim());
+      }
+
       setState(() {
         _isProcessing = false;
-      });
-
-      if (e.error.code == FailureCode.Canceled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment canceled.')),
-        );
-      } else {
-        setState(() {
-          _errorMessage = e.error.localizedMessage ?? 'Payment failed';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment failed: $_errorMessage')),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isProcessing = false;
-        _errorMessage = e.toString();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment failed: $_errorMessage')),
+        SnackBar(content: Text('Payment successful. Enjoy your new album!')),
       );
+
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    } else {
+      throw Exception('Failed to create PaymentIntent. Server error: ${response.body}');
     }
+  } on StripeException catch (e) {
+    setState(() {
+      _isProcessing = false;
+    });
+
+    print('Stripe error: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Payment failed: ${e.error.localizedMessage}')),
+    );
+  } catch (e, stackTrace) {
+    setState(() {
+      _isProcessing = false;
+      _errorMessage = e.toString();
+    });
+
+    print('Payment error: $e');
+    FirebaseCrashlytics.instance.recordError(e, stackTrace);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Payment failed: $_errorMessage')),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
