@@ -22,7 +22,7 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = '18'
+def flutterVersionCode = '24'
 if (flutterVersionCode == null) {
     flutterVersionCode = '1'
 }
@@ -102,7 +102,6 @@ flutter {
 
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:33.5.1')
-    implementation 'com.stripe:stripe-android:21.0.1'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'com.google.firebase:firebase-analytics'
 }

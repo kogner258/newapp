@@ -10,7 +10,10 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  bool showUnfulfilledOrders = false;
+
+  /// Whether to show ALL users (including those with no orders).
+  /// By default, this is false: only new (green), active (yellow), and returned (blue).
+  bool showAllUsers = false;
 
   final _albumFormKey = GlobalKey<FormState>();
   String _artist = '';
@@ -29,15 +32,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           IconButton(
             icon: Icon(Icons.filter_alt),
             onPressed: () {
-              setState(() {
-                showUnfulfilledOrders = !showUnfulfilledOrders;
-              });
+              // Optionally add more filtering logic here
             },
           ),
           IconButton(
             icon: Icon(Icons.library_music),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => AlbumListScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AlbumListScreen()),
+              );
             },
           ),
         ],
@@ -46,14 +50,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           ElevatedButton(
             onPressed: () {
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => HomeScreen()),
+              );
             },
             child: Text('Go to Home Page'),
           ),
           ElevatedButton(
-            onPressed: () {
-              _showAddAlbumDialog();
-            },
+            onPressed: _showAddAlbumDialog,
             child: Text('Add New Album'),
           ),
           Expanded(
@@ -64,23 +69,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
 
-                final usersWithStatus = snapshot.data!;
+                final allUsers = snapshot.data!;
+
+                // Filter out status == 'none' unless we explicitly want all users
+                final visibleUsers = showAllUsers
+                    ? allUsers
+                    : allUsers.where((u) => u['status'] != 'none').toList();
 
                 return ListView.builder(
-                  itemCount: usersWithStatus.length,
+                  itemCount: visibleUsers.length,
                   itemBuilder: (context, index) {
-                    final userMap = usersWithStatus[index];
+                    final userMap = visibleUsers[index];
                     final user = userMap['user'] as Map<String, dynamic>;
                     final userId = userMap['userId'] as String;
                     final status = userMap['status'] as String;
 
+                    // Pick dot color based on status
                     Color dotColor;
-                    if (status == 'new') {
-                      dotColor = Colors.green;
-                    } else if (status == 'active') {
-                      dotColor = Colors.yellow;
-                    } else {
-                      dotColor = Colors.transparent;
+                    switch (status) {
+                      case 'new':
+                        dotColor = Colors.green;
+                        break;
+                      case 'active':
+                        dotColor = Colors.yellow;
+                        break;
+                      case 'returned':
+                        dotColor = Colors.blue;
+                        break;
+                      default:
+                        dotColor = Colors.transparent;
+                        break;
                     }
 
                     return ListTile(
@@ -98,50 +116,103 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               },
             ),
           ),
+          // Toggle button at the bottom
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  showAllUsers = !showAllUsers;
+                });
+              },
+              child: Text(
+                showAllUsers ? 'Hide Inactive Users' : 'Show All Users',
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
+  /// Fetch all users and determine each user's status:
+  ///   - "new" if they have at least one 'new' order
+  ///   - "active" if they have at least one 'sent' or 'returned' but no 'new'
+  ///   - "returned" if they have at least one 'returned' but no 'new' or 'sent'
+  ///     (We’ll refine this logic below so "active" includes 'sent'.)
+  ///   - "none" if they have no orders
+  /// Then sort so:
+  ///   1) "new" first (green), sorted by earliest new order's timestamp ascending
+  ///   2) "active" (yellow)
+  ///   3) "returned" (blue)
+  ///   4) "none" last
   Future<List<Map<String, dynamic>>> _fetchUsersWithStatus() async {
-    QuerySnapshot usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+    QuerySnapshot usersSnapshot =
+        await FirebaseFirestore.instance.collection('users').get();
     List<Map<String, dynamic>> usersWithStatus = [];
 
     for (var userDoc in usersSnapshot.docs) {
       String userId = userDoc.id;
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
 
-      String status = await _determineUserStatus(userId);
+      // Return both final status and earliest "new" timestamp
+      Map<String, dynamic> statusInfo = await _determineUserStatusInfo(userId);
 
       usersWithStatus.add({
         'userId': userId,
         'user': userData,
-        'status': status,
+        'status': statusInfo['status'], // 'new', 'active', 'returned', or 'none'
+        'earliestNewTimestamp': statusInfo['earliestNewTimestamp'], // for sorting
       });
     }
 
-    // Sort users based on status
-    usersWithStatus.sort((a, b) {
-      String statusA = a['status'];
-      String statusB = b['status'];
+    // We define status sorting: new -> active -> returned -> none
+    final statusOrder = ['new', 'active', 'returned', 'none'];
 
-      if (statusA == 'new' && statusB != 'new') {
-        return -1;
-      } else if (statusA != 'new' && statusB == 'new') {
-        return 1;
-      } else if (statusA == 'active' && statusB != 'active') {
-        return -1;
-      } else if (statusA != 'active' && statusB == 'active') {
-        return 1;
-      } else {
-        return 0;
+    usersWithStatus.sort((a, b) {
+      final statusA = a['status'] as String;
+      final statusB = b['status'] as String;
+
+      int indexA = statusOrder.indexOf(statusA);
+      int indexB = statusOrder.indexOf(statusB);
+
+      // Compare by status first
+      if (indexA != indexB) {
+        return indexA.compareTo(indexB);
       }
+
+      // If both are "new", compare earliestNewTimestamp ascending
+      if (statusA == 'new') {
+        final Timestamp? tsA = a['earliestNewTimestamp'] as Timestamp?;
+        final Timestamp? tsB = b['earliestNewTimestamp'] as Timestamp?;
+
+        if (tsA != null && tsB != null) {
+          // earlier (older) first
+          return tsA.compareTo(tsB);
+        } else if (tsA == null && tsB != null) {
+          return 1;
+        } else if (tsA != null && tsB == null) {
+          return -1;
+        } else {
+          return 0;
+        }
+      }
+      // If same status but not "new", no further sorting needed
+      return 0;
     });
 
     return usersWithStatus;
   }
 
-  Future<String> _determineUserStatus(String userId) async {
+  /// Determine user status + earliest new order timestamp
+  /// Priority:
+  ///   1) if user has any "new" order => status = "new"
+  ///   2) else if user has any "sent" => status = "active"
+  ///   3) else if user has "returned" => status = "returned"
+  ///   4) otherwise => "none"
+  ///
+  /// Also track earliest "new" order timestamp for sorting "new" users.
+  Future<Map<String, dynamic>> _determineUserStatusInfo(String userId) async {
     QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
         .collection('orders')
         .where('userId', isEqualTo: userId)
@@ -149,23 +220,51 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     bool hasNewOrder = false;
     bool hasActiveOrder = false;
+    bool hasReturnedOrder = false;
+    Timestamp? earliestNewTimestamp;
 
     for (var orderDoc in ordersSnapshot.docs) {
       String status = orderDoc['status'] ?? '';
+      Timestamp? orderTs = orderDoc['timestamp'];
+
       if (status == 'new') {
         hasNewOrder = true;
-        break; // Highest priority
-      } else if (status == 'sent' || status == 'returned') {
+        // Track earliest new order
+        if (orderTs != null) {
+          if (earliestNewTimestamp == null ||
+              orderTs.compareTo(earliestNewTimestamp) < 0) {
+            earliestNewTimestamp = orderTs;
+          }
+        }
+      } else if (status == 'sent') {
         hasActiveOrder = true;
+      } else if (status == 'returned') {
+        // If we already found a 'new' or 'sent', that takes precedence,
+        // but we'll track returned separately for fallback
+        hasReturnedOrder = true;
       }
     }
 
     if (hasNewOrder) {
-      return 'new';
+      return {
+        'status': 'new',
+        'earliestNewTimestamp': earliestNewTimestamp,
+      };
     } else if (hasActiveOrder) {
-      return 'active';
+      return {
+        'status': 'active',
+        'earliestNewTimestamp': null,
+      };
+    } else if (hasReturnedOrder) {
+      return {
+        'status': 'returned',
+        'earliestNewTimestamp': null,
+      };
     } else {
-      return 'none';
+      return {
+        'status': 'none',
+        'earliestNewTimestamp': null,
+      };
     }
   }
 
@@ -181,7 +280,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 Text('Email: ${user['email'] ?? 'N/A'}'),
                 SizedBox(height: 10),
-                Text('Taste Profile:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  'Taste Profile:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 _buildTasteProfile(user['tasteProfile'] as Map<String, dynamic>?),
                 SizedBox(height: 10),
                 Text('Orders:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -234,10 +336,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     List<Widget> profileWidgets = [];
 
     List<String> genres = List<String>.from(tasteProfile['genres'] ?? []);
-    profileWidgets.add(Text('Genres: ${genres.isNotEmpty ? genres.join(', ') : 'N/A'}'));
+    profileWidgets.add(
+      Text('Genres: ${genres.isNotEmpty ? genres.join(', ') : 'N/A'}'),
+    );
 
     List<String> decades = List<String>.from(tasteProfile['decades'] ?? []);
-    profileWidgets.add(Text('Decades: ${decades.isNotEmpty ? decades.join(', ') : 'N/A'}'));
+    profileWidgets.add(
+      Text('Decades: ${decades.isNotEmpty ? decades.join(', ') : 'N/A'}'),
+    );
 
     String albumsListened = tasteProfile['albumsListened'] ?? 'N/A';
     profileWidgets.add(Text('Albums Listened: $albumsListened'));
@@ -251,7 +357,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildOrderActions(Map<String, dynamic> order, String orderId, String userId) {
+  Widget _buildOrderActions(
+      Map<String, dynamic> order, String orderId, String userId) {
+    // If the order is 'returned' but not confirmed, show "Confirm Return" button
     if (order['status'] == 'returned' && (order['returnConfirmed'] ?? false) == false) {
       return ElevatedButton(
         onPressed: () {
@@ -259,14 +367,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         },
         child: Text('Confirm Return'),
       );
-    } else if (order['status'] == 'new') {
+    }
+    // If the order is 'new', show "Send Album" button
+    else if (order['status'] == 'new') {
       return ElevatedButton(
         onPressed: () {
           _showSendAlbumDialog(orderId, order['address'], userId);
         },
         child: Text('Send Album'),
       );
-    } else {
+    }
+    // Otherwise, no action needed
+    else {
       return Text('No action needed');
     }
   }
@@ -331,7 +443,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildTextField('Release Year', (value) => _releaseYear = value),
                   _buildTextField('Quality', (value) => _quality = value),
                   _buildTextField('Cover URL', (value) => _coverUrl = value),
-                  _buildTextField('Album ID (if reusing existing album)', (value) => _albumId = value),
+                  _buildTextField(
+                    'Album ID (if reusing existing album)',
+                    (value) => _albumId = value,
+                  ),
                 ],
               ),
             ),
@@ -375,10 +490,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (_albumId.isNotEmpty) {
       albumId = _albumId;
     } else {
-      DocumentReference albumRef = await _firestoreService.addAlbum(_artist, _albumName, _releaseYear, _quality, _coverUrl);
+      DocumentReference albumRef = await _firestoreService.addAlbum(
+        _artist,
+        _albumName,
+        _releaseYear,
+        _quality,
+        _coverUrl,
+      );
       albumId = albumRef.id;
     }
 
+    // Update order with top-level and details.albumId
     await _firestoreService.updateOrderWithAlbum(orderId, albumId);
     setState(() {});
   }
@@ -386,8 +508,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _addAlbum() async {
     if (_albumFormKey.currentState?.validate() ?? false) {
       _albumFormKey.currentState?.save();
-      await _firestoreService.addAlbum(_artist, _albumName, _releaseYear, _quality, _coverUrl);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Album added successfully')));
+      await _firestoreService.addAlbum(
+        _artist,
+        _albumName,
+        _releaseYear,
+        _quality,
+        _coverUrl,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Album added successfully')),
+      );
       setState(() {});
     }
   }
@@ -422,8 +552,12 @@ class AlbumListScreen extends StatelessWidget {
               final album = albums[index].data() as Map<String, dynamic>;
 
               return ListTile(
-                title: Text(album['albumName']),
-                subtitle: Text('Artist: ${album['artist']} - Year: ${album['releaseYear']} - Quality: ${album['quality']}'),
+                title: Text(album['albumName'] ?? 'Unknown'),
+                subtitle: Text(
+                  'Artist: ${album['artist'] ?? 'N/A'} '
+                  '- Year: ${album['releaseYear'] ?? 'N/A'} '
+                  '- Quality: ${album['quality'] ?? 'N/A'}',
+                ),
               );
             },
           );
