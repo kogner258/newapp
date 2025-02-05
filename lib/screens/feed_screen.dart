@@ -39,84 +39,39 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  Future<void> _fetchFeedItems() async {
+Future<void> _fetchFeedItems() async {
+  print('Fetching feed items...'); // DEBUG: Check if this runs
+  setState(() {
+    _isLoading = true;
+    _feedItems.clear();
+  });
+
   try {
     QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
         .collection('orders')
         .where('status', whereIn: ['kept', 'returnConfirmed'])
         .orderBy('updatedAt', descending: true)
-        .limit(25) // Ensure only the latest 25 are fetched
+        .limit(25)
         .get();
+
+    print('Fetched ${ordersSnapshot.docs.length} orders from Firestore'); // DEBUG
 
     List<Map<String, dynamic>> feedItems = [];
 
     for (var doc in ordersSnapshot.docs) {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-      Timestamp? updatedAt = data['updatedAt'] as Timestamp?;
-      if (updatedAt == null) {
-        print('Skipping order ${doc.id} due to missing updatedAt field');
-        continue; // Skip orders without updatedAt
-      }
-
-      // Fetch user information
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(data['userId'])
-          .get();
-
-      String username = 'Unknown User';
-
-      if (userDoc.exists) {
-        Map<String, dynamic>? userData =
-            userDoc.data() as Map<String, dynamic>?;
-        if (userData != null) {
-          username = userData['username'] ?? 'Unknown User';
-        }
-      } else {
-        print('User document does not exist for ID: ${data['userId']}');
-      }
-
-      // Fetch album information
-      String? albumId = data['details']?['albumId'];
-      if (albumId == null || albumId.isEmpty) {
-        print('No albumId found in order document with ID: ${doc.id}');
-        continue; // Skip this feed item or handle as needed
-      }
-
-      DocumentSnapshot albumDoc = await FirebaseFirestore.instance
-          .collection('albums')
-          .doc(albumId)
-          .get();
-
-      String albumName = 'Unknown Album';
-      String albumImageUrl = '';
-
-      if (albumDoc.exists) {
-        Map<String, dynamic>? albumData =
-            albumDoc.data() as Map<String, dynamic>?;
-        if (albumData != null) {
-          albumName = albumData['albumName'] ?? 'Unknown Album';
-          albumImageUrl = albumData['coverUrl'] ?? '';
-        }
-      } else {
-        print('Album document does not exist for ID: $albumId');
-      }
+      print('Processing Order ${doc.id} - updatedAt: ${data['updatedAt']}'); // DEBUG
 
       feedItems.add({
-        'username': username,
+        'username': 'User', // Dummy for now
         'status': data['status'],
-        'albumName': albumName,
-        'albumImageUrl': albumImageUrl,
-        'albumId': albumId,
-        'userId': data['userId'],
-        'updatedAt': updatedAt, // Keep track of updated time
+        'albumName': 'Album Name',
+        'albumImageUrl': '',
+        'updatedAt': data['updatedAt']
       });
     }
 
-    // **Double-check sorting in case Firestore query fails**
-    feedItems.sort((a, b) => (b['updatedAt'] as Timestamp)
-        .compareTo(a['updatedAt'] as Timestamp));
+    print('Final feed item count: ${feedItems.length}'); // DEBUG
 
     setState(() {
       _feedItems = feedItems;
@@ -129,6 +84,7 @@ class _FeedScreenState extends State<FeedScreen> {
     });
   }
 }
+
 
 
   @override

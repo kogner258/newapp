@@ -186,36 +186,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Color(0xFFFFA500),
                   fixedHeight: true,
                 ),
-                SizedBox(height: 20),
-                RetroButton(
-                  text: 'Personal Profile',
-                  onPressed: () {
-                    if (_user != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PersonalProfileScreen(userId: _user!.uid),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('User not authenticated.')),
-                      );
-                    }
-                  },
-                  color: Color(0xFFD24407),
-                  fixedHeight: true,
-                  shadowColor: Colors.black,
-                ),
-                SizedBox(height: 20),
-
-                /// **New Button to Update Orders**
-                RetroButton(
-                  text: _isUpdatingOrders ? 'Updating...' : 'Update Orders',
-                  onPressed: _isUpdatingOrders ? null : _updateOrdersWithTimestamps,
-                  color: Colors.blue,
-                  fixedHeight: true,
-                ),
               ],
               Spacer(),
               Padding(

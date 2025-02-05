@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
       QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
           .collection('orders')
           .where('status', whereIn: ['kept', 'returnedConfirmed'])
-          .orderBy('timestamp', descending: true)
+          .orderBy('updatedAt', descending: true)
           .get();
 
       List<FeedItem> feedItems = [];
