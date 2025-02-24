@@ -570,7 +570,7 @@ Future<void> _showReviewDialog({String initialComment = ''}) async {
     );
   }
 
-  Widget _buildUserReviewsSection() {
+ Widget _buildUserReviewsSection() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('albums')
@@ -600,115 +600,119 @@ Future<void> _showReviewDialog({String initialComment = ''}) async {
           );
         }
 
-        return SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, // Ensure left alignment
-            children: snapshot.data!.docs.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              String comment = data['comment'] ?? '';
-              Timestamp? ts = data['timestamp'];
-              DateTime? dt = ts?.toDate();
-              String dateStr = dt != null ? DateFormat('MMM dd, yyyy').format(dt) : '';
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.4, // Adjust this value as needed
+          child: Scrollbar(
+            thumbVisibility: true,
+            thickness: 6,
+            radius: Radius.circular(8),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  String comment = data['comment'] ?? '';
+                  Timestamp? ts = data['timestamp'];
+                  DateTime? dt = ts?.toDate();
+                  String dateStr = dt != null ? DateFormat('MMM dd, yyyy').format(dt) : '';
 
-              String userId = data['userId'];
-              String orderId = data['orderId'] ?? 'no_order';
+                  String userId = data['userId'];
+                  String orderId = data['orderId'] ?? 'no_order';
 
-              bool expanded = expandedReviews.contains(doc.id);
-              bool needsMore = comment.length > 120 && !expanded;
-              String displayComment = expanded || !needsMore ? comment : (comment.substring(0, 120) + '...');
+                  bool expanded = expandedReviews.contains(doc.id);
+                  bool needsMore = comment.length > 120 && !expanded;
+                  String displayComment = expanded || !needsMore ? comment : (comment.substring(0, 120) + '...');
 
-              return FutureBuilder<Map<String, String>>(
-                future: _fetchUserAndStatusForReview(userId, orderId),
-                builder: (context, userSnapshot) {
-                  if (userSnapshot.connectionState == ConnectionState.waiting) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text(
-                        'Loading user info...',
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    );
-                  }
-
-                  if (userSnapshot.hasError || userSnapshot.data == null) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text(
-                        'Error loading user info',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    );
-                  }
-
-                  String username = userSnapshot.data!['username'] ?? 'Unknown User';
-                  String statusNote = userSnapshot.data!['statusNote'] ?? '(hasn\'t received this album)';
-
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start, // Ensure left alignment
-                      children: [
-                        // Username
-                        Text(
-                          username,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                  return FutureBuilder<Map<String, String>>(
+                    future: _fetchUserAndStatusForReview(userId, orderId),
+                    builder: (context, userSnapshot) {
+                      if (userSnapshot.connectionState == ConnectionState.waiting) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Text(
+                            'Loading user info...',
+                            style: TextStyle(color: Colors.black),
                           ),
-                        ),
-                        // Status Note
-                        Text(
-                          statusNote,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
+                        );
+                      }
+
+                      if (userSnapshot.hasError || userSnapshot.data == null) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Text(
+                            'Error loading user info',
+                            style: TextStyle(color: Colors.red),
                           ),
-                        ),
-                        // Date
-                        Text(
-                          dateStr,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        // Comment with optional 'more'
-                        Text(
-                          displayComment,
-                          style: TextStyle(color: Colors.black),
-                          maxLines: expanded ? null : 2,
-                          overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                          textAlign: TextAlign.left, // Ensure left alignment
-                        ),
-                        if (needsMore)
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                expandedReviews.add(doc.id);
-                              });
-                            },
-                            child: Text(
-                              'more',
+                        );
+                      }
+
+                      String username = userSnapshot.data!['username'] ?? 'Unknown User';
+                      String statusNote = userSnapshot.data!['statusNote'] ?? '(hasn\'t received this album)';
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              username,
                               style: TextStyle(
-                                color: Colors.blue,
-                                decoration: TextDecoration.underline,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
                             ),
-                          ),
-                        SizedBox(height: 8),
-                      ],
-                    ),
+                            Text(
+                              statusNote,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            Text(
+                              dateStr,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              displayComment,
+                              style: TextStyle(color: Colors.black),
+                              maxLines: expanded ? null : 2,
+                              overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                              textAlign: TextAlign.left,
+                            ),
+                            if (needsMore)
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    expandedReviews.add(doc.id);
+                                  });
+                                },
+                                child: Text(
+                                  'more',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            SizedBox(height: 8),
+                          ],
+                        ),
+                      );
+                    },
                   );
-                },
-              );
-            }).toList(),
+                }).toList(),
+              ),
+            ),
           ),
         );
       },
     );
   }
-
+  
   Future<Map<String, String>> _fetchUserAndStatusForReview(String userId, String orderId) async {
     Map<String, String> result = {};
     
