@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dissonantapp2/widgets/grainy_background_widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../services/firestore_service.dart';
 import '../widgets/retro_button_widget.dart';
 import '../models/album.dart';
@@ -15,117 +16,92 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  List<FeedItem> _feedItems = [];
-  bool _isLoading = true;
 
+  // Our paginated feed items
+  List<FeedItem> _feedItems = [];
+
+  // Loading states
+  bool _isLoading = true;         // initial load
+  bool _isFetchingMore = false;   // when loading the next chunk
+  bool _hasMoreData = true;       // whether more data might be available
+
+  // Firestore pagination helpers
+  DocumentSnapshot? _lastDocument;
+  final int _pageSize = 10;       // how many docs to fetch in each chunk
+
+  // PageView controller and state
   PageController _pageController = PageController();
   int _currentIndex = 0;
 
+  // Spine settings for the “stacked” UI
   final double spineHeight = 45.0;
   final int maxSpines = 3;
 
   @override
   void initState() {
     super.initState();
-    _fetchFeedItems();
+    _fetchInitialFeedItems();
     _pageController.addListener(_onPageChanged);
+  }
+
+  @override
+  void dispose() {
+    _pageController.removeListener(_onPageChanged);
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _onPageChanged() {
     if (!mounted) return;
     int newIndex = _pageController.page!.round();
+
     if (newIndex != _currentIndex && newIndex < _feedItems.length) {
       setState(() {
         _currentIndex = newIndex;
       });
+
+      // If user is near the bottom (last or second-to-last item), try fetching more
+      if (newIndex >= _feedItems.length - 2 && _hasMoreData) {
+        _fetchMoreFeedItems();
+      }
     }
   }
 
-  bool isSupportedImageFormat(String imageUrl) {
-    try {
-      Uri uri = Uri.parse(imageUrl);
-      String path = uri.path.toLowerCase();
-      String extension = path.split('.').last;
-      return (extension == 'jpg' || extension == 'jpeg' || extension == 'png');
-    } catch (e) {
-      print('Error parsing image URL: $imageUrl, error: $e');
-      return false;
-    }
-  }
+  /// Fetch the first chunk of documents
+  Future<void> _fetchInitialFeedItems() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-  Future<void> _fetchFeedItems() async {
     try {
-      QuerySnapshot ordersSnapshot = await FirebaseFirestore.instance
+      Query query = FirebaseFirestore.instance
           .collection('orders')
           .where('status', whereIn: ['kept', 'returnedConfirmed'])
           .orderBy('updatedAt', descending: true)
-          .get();
+          .limit(_pageSize);
 
-      List<FeedItem> feedItems = [];
-
-      for (var doc in ordersSnapshot.docs) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-        // Fetch user information
-        DocumentSnapshot publicProfileDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(data['userId'])
-            .collection('public')
-            .doc('profile')
-            .get();
-
-        String username = 'Unknown User';
-        if (publicProfileDoc.exists) {
-          Map<String, dynamic>? publicData =
-              publicProfileDoc.data() as Map<String, dynamic>?;
-          if (publicData != null) {
-            username = publicData['username'] ?? 'Unknown User';
-          }
-        }
-
-        // Fetch album information
-        String? albumId = data['details']?['albumId'];
-        if (albumId == null || albumId.isEmpty) continue;
-
-        DocumentSnapshot albumDoc = await FirebaseFirestore.instance
-            .collection('albums')
-            .doc(albumId)
-            .get();
-
-        if (albumDoc.exists) {
-          Album album = Album.fromDocument(albumDoc);
-
-          // Log the album image URL
-          print('Loading image URL: ${album.albumImageUrl}');
-
-          // Validate URL format
-          if (!isSupportedImageFormat(album.albumImageUrl)) {
-            print('Unsupported image format for album ${album.albumName}: ${album.albumImageUrl}');
-            continue; // Skip this album or handle accordingly
-          }
-
-          FeedItem feedItem = FeedItem(
-            username: username,
-            status: data['status'],
-            album: album,
-          );
-
-          feedItems.add(feedItem);
-        } else {
-          print('Album with ID $albumId does not exist.');
-        }
+      QuerySnapshot ordersSnapshot = await query.get();
+      if (ordersSnapshot.docs.isNotEmpty) {
+        _lastDocument = ordersSnapshot.docs.last;
       }
+
+      // Convert documents into feed items
+      List<FeedItem> newFeedItems = await _processOrderDocs(ordersSnapshot.docs);
 
       if (mounted) {
         setState(() {
-          _feedItems = feedItems;
+          _feedItems = newFeedItems;
           _isLoading = false;
+          // If we got fewer than _pageSize docs, we won't have more to load
+          _hasMoreData = (ordersSnapshot.docs.length == _pageSize);
         });
 
-        // Prefetch the first image
+        // Optionally prefetch the first image
         if (_feedItems.isNotEmpty) {
-          precacheImage(NetworkImage(_feedItems[0].album.albumImageUrl), context)
-              .catchError((error) {
+          precacheImage(
+            NetworkImage(_feedItems[0].album.albumImageUrl),
+            context,
+          ).catchError((error) {
             print('Error precaching first image: $error');
           });
         }
@@ -143,6 +119,135 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Fetch the next chunk of documents
+  Future<void> _fetchMoreFeedItems() async {
+    // If we're already fetching or there's nothing left, do nothing
+    if (_isFetchingMore || !_hasMoreData) return;
+
+    setState(() {
+      _isFetchingMore = true;
+    });
+
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('orders')
+          .where('status', whereIn: ['kept', 'returnedConfirmed'])
+          .orderBy('updatedAt', descending: true)
+          .limit(_pageSize);
+
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      QuerySnapshot ordersSnapshot = await query.get();
+      if (ordersSnapshot.docs.isNotEmpty) {
+        _lastDocument = ordersSnapshot.docs.last;
+      }
+
+      List<FeedItem> moreFeedItems = await _processOrderDocs(ordersSnapshot.docs);
+
+      if (mounted) {
+        setState(() {
+          _feedItems.addAll(moreFeedItems);
+          _isFetchingMore = false;
+          _hasMoreData = (ordersSnapshot.docs.length == _pageSize);
+        });
+      }
+    } catch (e) {
+      print('Error fetching more feed items: $e');
+      if (mounted) {
+        setState(() {
+          _isFetchingMore = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading more feed items: $e')),
+        );
+      }
+    }
+  }
+
+  /// Process each order doc into a FeedItem by fetching user and album docs
+  Future<List<FeedItem>> _processOrderDocs(List<DocumentSnapshot> docs) async {
+    List<FeedItem> feedItems = [];
+
+    for (var doc in docs) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+      // Fetch user info
+      String userId = data['userId'] ?? '';
+      String username = 'Unknown User';
+
+      if (userId.isNotEmpty) {
+        DocumentSnapshot publicProfileDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('public')
+            .doc('profile')
+            .get();
+
+        if (publicProfileDoc.exists) {
+          Map<String, dynamic>? publicData =
+              publicProfileDoc.data() as Map<String, dynamic>?;
+          if (publicData != null) {
+            username = publicData['username'] ?? 'Unknown User';
+          }
+        }
+      }
+
+      // Fetch album info
+      String? albumId = data['details']?['albumId'];
+      if (albumId == null || albumId.isEmpty) {
+        // skip if no album ID
+        continue;
+      }
+
+      DocumentSnapshot albumDoc = await FirebaseFirestore.instance
+          .collection('albums')
+          .doc(albumId)
+          .get();
+
+      if (!albumDoc.exists) {
+        print('Album with ID $albumId does not exist.');
+        continue;
+      }
+
+      Album album = Album.fromDocument(albumDoc);
+
+      // Log the album image URL
+      print('Loading image URL: ${album.albumImageUrl}');
+
+      // Validate URL format
+      if (!isSupportedImageFormat(album.albumImageUrl)) {
+        print('Unsupported image format for album ${album.albumName}: '
+            '${album.albumImageUrl}');
+        continue; // skip if not a supported image
+      }
+
+      FeedItem feedItem = FeedItem(
+        username: username,
+        status: data['status'],
+        album: album,
+      );
+      feedItems.add(feedItem);
+    }
+
+    return feedItems;
+  }
+
+  /// Check if a given image URL is a common format (jpg/png)
+  bool isSupportedImageFormat(String imageUrl) {
+    try {
+      Uri uri = Uri.parse(imageUrl);
+      String path = uri.path.toLowerCase();
+      String extension = path.split('.').last;
+      return (extension == 'jpg' || extension == 'jpeg' || extension == 'png');
+    } catch (e) {
+      print('Error parsing image URL: $imageUrl, error: $e');
+      return false;
+    }
+  }
+
+  /// Add album to wishlist
   Future<void> _addToWishlist(
       String albumId, String albumName, String albumImageUrl) async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -161,13 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _pageController.removeListener(_onPageChanged);
-    _pageController.dispose();
-    super.dispose();
-  }
-
+  /// Build each visible feed item
   Widget _buildFeedItem(FeedItem item) {
     String actionText = item.status == 'kept' ? 'kept' : 'returned';
 
@@ -179,12 +278,11 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // User action text
+            // Username & action & album name
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0),
               child: Row(
                 children: [
-                  // Username and action
                   Expanded(
                     flex: 1,
                     child: Column(
@@ -212,7 +310,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   SizedBox(width: 10.0),
-                  // Album name
                   Expanded(
                     flex: 1,
                     child: Text(
@@ -228,13 +325,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+
             SizedBox(height: 16.0),
+
             // Album image with navigation
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.35,
               child: InkWell(
                 onTap: () {
-                  // Navigate to AlbumDetailsScreen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -244,8 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
-                child: (item.album.albumImageUrl != null &&
-                        item.album.albumImageUrl.isNotEmpty &&
+                child: (item.album.albumImageUrl.isNotEmpty &&
                         isSupportedImageFormat(item.album.albumImageUrl))
                     ? Image.network(
                         item.album.albumImageUrl,
@@ -255,7 +352,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           return Center(child: CircularProgressIndicator());
                         },
                         errorBuilder: (context, error, stackTrace) {
-                          print('Error loading image from ${item.album.albumImageUrl}: $error');
+                          print('Error loading image '
+                              'from ${item.album.albumImageUrl}: $error');
                           return Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -276,7 +374,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
               ),
             ),
+
             SizedBox(height: 30.0),
+
             // Add to Wishlist button
             RetroButton(
               text: 'Add to Wishlist',
@@ -296,6 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Animate the active/nearby feed items in the vertical PageView
   Widget _buildAnimatedFeedItem(FeedItem item, int index) {
     return AnimatedBuilder(
       animation: _pageController,
@@ -305,9 +406,9 @@ class _HomeScreenState extends State<HomeScreen> {
           double page =
               _pageController.page ?? _pageController.initialPage.toDouble();
           double difference = (index - page).abs();
+          // Simple fade-out effect as the item moves away from center
           opacity = (1 - difference).clamp(0.0, 1.0);
         }
-
         return Opacity(
           opacity: opacity,
           child: _buildFeedItem(item),
@@ -316,6 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Build the “stack” of spines at the bottom
   Widget _buildSpines(double totalSpinesHeight) {
     return Positioned(
       bottom: 0,
@@ -372,6 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Build an individual spine “bar” representing an upcoming album
   Widget _buildSpine(FeedItem item) {
     String albumName = item.album.albumName;
     if (albumName.length > 26) {
@@ -383,13 +486,11 @@ class _HomeScreenState extends State<HomeScreen> {
       color: Colors.transparent,
       child: Stack(
         children: [
-          // Spine image
           Positioned.fill(
             child: Image.asset(
               'assets/spineasset.png',
             ),
           ),
-          // Album name on the spine
           Positioned(
             left: 60,
             top: 0,
@@ -424,7 +525,10 @@ class _HomeScreenState extends State<HomeScreen> {
             : SafeArea(
                 child: Stack(
                   children: [
+                    // Bottom stacked spines
                     _buildSpines(totalSpinesHeight),
+
+                    // The PageView itself
                     Padding(
                       padding: EdgeInsets.only(bottom: totalSpinesHeight),
                       child: PageView.builder(
@@ -437,6 +541,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                     ),
+
+                    // “My Feed” title
                     Positioned(
                       top: 5.0,
                       left: 0,
@@ -452,6 +558,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+
+                    // If desired, you could add a loading indicator at the bottom
+                    if (_isFetchingMore)
+                      Positioned(
+                        bottom: totalSpinesHeight + 20,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
                   ],
                 ),
               ),

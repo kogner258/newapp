@@ -321,11 +321,12 @@ class FirestoreService {
     });
   }
 
-  Future<void> addOrder(String userId, String address) async {
+  Future<void> addOrder(String userId, String address, {int flowVersion = 1,}) async {
     await _firestore.collection('orders').add({
       'userId': userId,
       'address': address,
       'status': 'new',
+      'flowVersion': flowVersion,
       'timestamp': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(), 
       'details': {},
@@ -335,6 +336,17 @@ class FirestoreService {
       'hasOrdered': true,
       'updatedAt': FieldValue.serverTimestamp(), // Added updatedAt timestamp
     });
+  }
+
+// For retrieving the user document
+  Future<DocumentSnapshot?> getUserDoc(String? uid) async {
+    if (uid == null) return null;
+    return FirebaseFirestore.instance.collection('users').doc(uid).get();
+  }
+
+  // For updating the user document
+  Future<void> updateUserDoc(String uid, Map<String, dynamic> data) async {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update(data);
   }
 
   Future<void> updateOrderWithAlbum(String orderId, String albumId) async {

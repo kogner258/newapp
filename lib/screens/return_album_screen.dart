@@ -31,6 +31,7 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
   String _albumCoverUrl = '';
   String _albumInfo = '';
   String? _albumId; // Store albumId for writing review
+  int _flowVersion = 1; // Default to old flow if not present
 
   @override
   void initState() {
@@ -42,7 +43,10 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
     try {
       final orderDoc = await _firestoreService.getOrderById(widget.orderId);
       if (orderDoc!.exists) {
-        final orderData = orderDoc?.data() as Map<String, dynamic>;
+        final orderData = orderDoc.data() as Map<String, dynamic>;
+        // Retrieve flowVersion; if not present, default to 1
+        _flowVersion = orderData['flowVersion'] ?? 1;
+
         final albumId = orderData['details']['albumId'] as String;
         _albumId = albumId;
         final albumDoc = await _firestoreService.getAlbumById(albumId);
@@ -85,7 +89,6 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
     if (_albumId == null) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-
     await _firestoreService.addReview(
       albumId: _albumId!,
       userId: user.uid,
@@ -105,7 +108,6 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
         'heardBefore': _heardBefore,
         'ownAlbum': _ownAlbum,
         'likedAlbum': _likedAlbum,
-        // no miscThoughts anymore
       };
 
       // Save feedback to Firestore
@@ -118,6 +120,12 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
 
       // Update the order status to 'returned'
       await _firestoreService.updateOrderStatus(widget.orderId, 'returned');
+
+      // If the order used the new flow (flowVersion == 2), mark user as free for next album.
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && _flowVersion == 2) {
+        await _firestoreService.updateUserDoc(currentUser.uid, {'freeOrder': true});
+      }
 
       setState(() {
         _isSubmitting = false;
@@ -142,8 +150,8 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
-                      mainAxisAlignment:MainAxisAlignment.center,
-                      crossAxisAlignment:CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         if (_albumCoverUrl.isNotEmpty)
                           Image.network(
@@ -151,7 +159,9 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                             height: 200,
                             width: 200,
                             errorBuilder: (context, error, stackTrace) {
-                              return Center(child: Text('Failed to load image', style:TextStyle(color:Colors.white)));
+                              return Center(
+                                  child: Text('Failed to load image',
+                                      style: TextStyle(color: Colors.white)));
                             },
                           ),
                         if (_albumInfo.isNotEmpty)
@@ -159,136 +169,135 @@ class _ReturnAlbumScreenState extends State<ReturnAlbumScreen> {
                             padding: const EdgeInsets.only(top: 16.0),
                             child: Text(
                               _albumInfo,
-                              style: TextStyle(fontSize:24, color:Colors.white),
+                              style: TextStyle(fontSize: 24, color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                           ),
-                        SizedBox(height:20),
+                        SizedBox(height: 20),
                         Windows95Window(
-                          showTitleBar: true, // or false, depending on desired behavior
-                          title:'Return Feedback',
+                          showTitleBar: true,
+                          title: 'Return Feedback',
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Form(
-                              key:_formKey,
-                              child:Column(
-                                crossAxisAlignment:CrossAxisAlignment.stretch,
-                                mainAxisSize:MainAxisSize.min,
-                                children:[
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                                   Text(
                                     'Please let us know:',
-                                    style:TextStyle(fontSize:18, color:Colors.black),
+                                    style: TextStyle(fontSize: 18, color: Colors.black),
                                   ),
-                                  SizedBox(height:16.0),
+                                  SizedBox(height: 16.0),
                                   DropdownButtonFormField<String>(
                                     decoration: InputDecoration(
-                                      labelText:'Had you heard this album before?',
-                                      labelStyle:TextStyle(color:Colors.black),
-                                      filled:true,
-                                      fillColor:Colors.white,
-                                      enabledBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      labelText: 'Had you heard this album before?',
+                                      labelStyle: TextStyle(color: Colors.black),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
-                                      focusedBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
                                     ),
-                                    dropdownColor:Colors.white,
-                                    value:_heardBefore,
-                                    items:['Yes','No'].map((String value) {
+                                    dropdownColor: Colors.white,
+                                    value: _heardBefore,
+                                    items: ['Yes', 'No'].map((String value) {
                                       return DropdownMenuItem<String>(
-                                        value:value,
-                                        child:Text(value, style:TextStyle(color:Colors.black)),
+                                        value: value,
+                                        child: Text(value, style: TextStyle(color: Colors.black)),
                                       );
                                     }).toList(),
-                                    onChanged:(newValue) {
+                                    onChanged: (newValue) {
                                       setState(() {
                                         _heardBefore = newValue!;
                                       });
                                     },
                                   ),
-                                  SizedBox(height:16.0),
+                                  SizedBox(height: 16.0),
                                   DropdownButtonFormField<String>(
                                     decoration: InputDecoration(
-                                      labelText:'Do you already own this album?',
-                                      labelStyle:TextStyle(color:Colors.black),
-                                      filled:true,
-                                      fillColor:Colors.white,
-                                      enabledBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      labelText: 'Do you already own this album?',
+                                      labelStyle: TextStyle(color: Colors.black),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
-                                      focusedBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
                                     ),
-                                    dropdownColor:Colors.white,
-                                    value:_ownAlbum,
-                                    items:['Yes','No'].map((String value) {
+                                    dropdownColor: Colors.white,
+                                    value: _ownAlbum,
+                                    items: ['Yes', 'No'].map((String value) {
                                       return DropdownMenuItem<String>(
-                                        value:value,
-                                        child:Text(value, style:TextStyle(color:Colors.black)),
+                                        value: value,
+                                        child: Text(value, style: TextStyle(color: Colors.black)),
                                       );
                                     }).toList(),
-                                    onChanged:(newValue) {
+                                    onChanged: (newValue) {
                                       setState(() {
                                         _ownAlbum = newValue!;
                                       });
                                     },
                                   ),
-                                  SizedBox(height:16.0),
+                                  SizedBox(height: 16.0),
                                   DropdownButtonFormField<String>(
                                     decoration: InputDecoration(
-                                      labelText:'Did you like this album?',
-                                      labelStyle:TextStyle(color:Colors.black),
-                                      filled:true,
-                                      fillColor:Colors.white,
-                                      enabledBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      labelText: 'Did you like this album?',
+                                      labelStyle: TextStyle(color: Colors.black),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
-                                      focusedBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
                                     ),
-                                    value:_likedAlbum,
-                                    dropdownColor:Colors.white,
-                                    items:['Yes!','Meh','Nah'].map((String value) {
+                                    dropdownColor: Colors.white,
+                                    value: _likedAlbum,
+                                    items: ['Yes!', 'Meh', 'Nah'].map((String value) {
                                       return DropdownMenuItem<String>(
-                                        value:value,
-                                        child:Text(value, style:TextStyle(color:Colors.black)),
+                                        value: value,
+                                        child: Text(value, style: TextStyle(color: Colors.black)),
                                       );
                                     }).toList(),
-                                    onChanged:(newValue) {
+                                    onChanged: (newValue) {
                                       setState(() {
                                         _likedAlbum = newValue!;
                                       });
                                     },
                                   ),
-                                  SizedBox(height:16.0),
-                                  // Optional Leave a Review
+                                  SizedBox(height: 16.0),
                                   TextFormField(
                                     decoration: InputDecoration(
-                                      labelText:'Leave a review!',
-                                      labelStyle:TextStyle(color:Colors.black),
-                                      filled:true,
-                                      fillColor:Colors.white,
-                                      enabledBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      labelText: 'Leave a review!',
+                                      labelStyle: TextStyle(color: Colors.black),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
-                                      focusedBorder:OutlineInputBorder(
-                                        borderSide: BorderSide(color:Colors.black, width:2),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.black, width: 2),
                                       ),
                                     ),
-                                    style: TextStyle(color:Colors.black),
-                                    maxLines:3,
-                                    onChanged:(value) {
+                                    style: TextStyle(color: Colors.black),
+                                    maxLines: 3,
+                                    onChanged: (value) {
                                       _review = value;
                                     },
                                   ),
-                                  SizedBox(height:16.0),
+                                  SizedBox(height: 16.0),
                                   RetroButton(
-                                    text:'Submit Feedback',
-                                    onPressed:_submitForm,
-                                    color:Color(0xFFD24407),
+                                    text: 'Submit Feedback',
+                                    onPressed: _submitForm,
+                                    color: Color(0xFFD24407),
                                   ),
                                 ],
                               ),
